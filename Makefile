@@ -3,7 +3,7 @@
 # Build variables
 BINARY_NAME := projector
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS := -s -w -X github.com/anpan/projector/cmd.version=$(VERSION)
+LDFLAGS := -s -w -X github.com/ideaspaper/projector/cmd.version=$(VERSION)
 
 # Build the binary
 build:
@@ -45,9 +45,9 @@ deps:
 release-snapshot:
 	goreleaser release --snapshot --clean
 
-# Create a new release (requires GITHUB_TOKEN)
+# Create a new release (requires GITHUB_TOKEN in .env)
 release:
-	goreleaser release --clean
+	set -a && source .env && set +a && goreleaser release --clean
 
 # Create a new tag and release
 # Usage: make release-tag VERSION=v1.0.0
@@ -55,7 +55,7 @@ release-tag:
 	@if [ -z "$(VERSION)" ]; then echo "Usage: make release-tag VERSION=v1.0.0"; exit 1; fi
 	git tag -a $(VERSION) -m "Release $(VERSION)"
 	git push origin $(VERSION)
-	goreleaser release --clean
+	set -a && source .env && set +a && goreleaser release --clean
 
 # Run the application
 run:
