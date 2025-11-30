@@ -20,7 +20,7 @@ A powerful command-line project manager inspired by the [VS Code Project Manager
 ### Using `go install`
 
 ```bash
-go install github.com/anpan/projector@latest
+go install github.com/ideaspaper/projector@latest
 ```
 
 This will install the binary as `projector` in your `$GOPATH/bin` directory. Make sure `$GOPATH/bin` is in your `PATH`.
@@ -29,7 +29,7 @@ This will install the binary as `projector` in your `$GOPATH/bin` directory. Mak
 
 ```bash
 # Clone the repository
-git clone https://github.com/anpan/projector.git
+git clone https://github.com/ideaspaper/projector.git
 cd projector
 
 # Build the binary
