@@ -1,0 +1,318 @@
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"github.com/anpan/projector/pkg/config"
+	"github.com/anpan/projector/pkg/output"
+	"github.com/anpan/projector/pkg/storage"
+)
+
+// removeCmd represents the remove command
+var removeCmd = &cobra.Command{
+	Use:     "remove <project-name>",
+	Short:   "Remove a project from favorites",
+	Long:    `Remove a project from your saved favorites by name.`,
+	Aliases: []string{"rm", "delete"},
+	Args:    cobra.ExactArgs(1),
+	RunE:    runRemove,
+}
+
+func init() {
+	rootCmd.AddCommand(removeCmd)
+}
+
+func runRemove(cmd *cobra.Command, args []string) error {
+	projectName := args[0]
+
+	// Load config
+	cfg, err := config.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Initialize storage
+	store, err := storage.NewStorage(cfg.GetProjectsLocation())
+	if err != nil {
+		return fmt.Errorf("failed to initialize storage: %w", err)
+	}
+
+	// Load projects
+	projects, err := store.LoadProjects()
+	if err != nil {
+		return fmt.Errorf("failed to load projects: %w", err)
+	}
+
+	// Find and remove project
+	if !projects.Remove(projectName) {
+		return fmt.Errorf("project '%s' not found", projectName)
+	}
+
+	// Save
+	if err := store.SaveProjects(projects); err != nil {
+		return fmt.Errorf("failed to save projects: %w", err)
+	}
+
+	// Output
+	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
+	fmt.Println(formatter.FormatSuccess(fmt.Sprintf("Removed project '%s'", projectName)))
+
+	return nil
+}
+
+// editCmd represents the edit command
+var editCmd = &cobra.Command{
+	Use:   "edit <project-name>",
+	Short: "Edit a project's properties",
+	Long: `Edit a project's name, path, or tags.
+
+Examples:
+  # Rename a project
+  projector edit myproject --name "New Name"
+
+  # Update path
+  projector edit myproject --path ~/new/path
+
+  # Toggle enabled state
+  projector edit myproject --enabled=false`,
+	Args: cobra.ExactArgs(1),
+	RunE: runEdit,
+}
+
+var (
+	editName    string
+	editPath    string
+	editEnabled string
+)
+
+func init() {
+	rootCmd.AddCommand(editCmd)
+
+	editCmd.Flags().StringVar(&editName, "name", "", "new project name")
+	editCmd.Flags().StringVar(&editPath, "path", "", "new project path")
+	editCmd.Flags().StringVar(&editEnabled, "enabled", "", "enable/disable project (true/false)")
+}
+
+func runEdit(cmd *cobra.Command, args []string) error {
+	projectName := args[0]
+
+	// Load config
+	cfg, err := config.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Initialize storage
+	store, err := storage.NewStorage(cfg.GetProjectsLocation())
+	if err != nil {
+		return fmt.Errorf("failed to initialize storage: %w", err)
+	}
+
+	// Load projects
+	projects, err := store.LoadProjects()
+	if err != nil {
+		return fmt.Errorf("failed to load projects: %w", err)
+	}
+
+	// Find project
+	project := projects.FindByName(projectName)
+	if project == nil {
+		return fmt.Errorf("project '%s' not found", projectName)
+	}
+
+	// Apply changes
+	changed := false
+
+	if editName != "" {
+		// Check for name conflict
+		if existing := projects.FindByName(editName); existing != nil && existing != project {
+			return fmt.Errorf("project with name '%s' already exists", editName)
+		}
+		project.Name = editName
+		changed = true
+	}
+
+	if editPath != "" {
+		project.RootPath = editPath
+		changed = true
+	}
+
+	if editEnabled != "" {
+		if editEnabled == "true" {
+			project.Enabled = true
+			changed = true
+		} else if editEnabled == "false" {
+			project.Enabled = false
+			changed = true
+		} else {
+			return fmt.Errorf("--enabled must be 'true' or 'false'")
+		}
+	}
+
+	if !changed {
+		return fmt.Errorf("no changes specified (use --name, --path, or --enabled)")
+	}
+
+	// Save
+	if err := store.SaveProjects(projects); err != nil {
+		return fmt.Errorf("failed to save projects: %w", err)
+	}
+
+	// Output
+	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
+	fmt.Println(formatter.FormatSuccess(fmt.Sprintf("Updated project '%s'", project.Name)))
+
+	return nil
+}
+
+// tagCmd represents the tag command group
+var tagCmd = &cobra.Command{
+	Use:   "tag",
+	Short: "Manage project tags",
+	Long:  `Add, remove, or list tags for projects.`,
+}
+
+var tagAddCmd = &cobra.Command{
+	Use:   "add <project-name> <tag>",
+	Short: "Add a tag to a project",
+	Args:  cobra.ExactArgs(2),
+	RunE:  runTagAdd,
+}
+
+var tagRemoveCmd = &cobra.Command{
+	Use:     "remove <project-name> <tag>",
+	Short:   "Remove a tag from a project",
+	Aliases: []string{"rm"},
+	Args:    cobra.ExactArgs(2),
+	RunE:    runTagRemove,
+}
+
+var tagListCmd = &cobra.Command{
+	Use:     "list",
+	Short:   "List available tags",
+	Aliases: []string{"ls"},
+	RunE:    runTagList,
+}
+
+func init() {
+	rootCmd.AddCommand(tagCmd)
+	tagCmd.AddCommand(tagAddCmd)
+	tagCmd.AddCommand(tagRemoveCmd)
+	tagCmd.AddCommand(tagListCmd)
+}
+
+func runTagAdd(cmd *cobra.Command, args []string) error {
+	projectName := args[0]
+	tagName := args[1]
+
+	// Load config
+	cfg, err := config.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Initialize storage
+	store, err := storage.NewStorage(cfg.GetProjectsLocation())
+	if err != nil {
+		return fmt.Errorf("failed to initialize storage: %w", err)
+	}
+
+	// Load projects
+	projects, err := store.LoadProjects()
+	if err != nil {
+		return fmt.Errorf("failed to load projects: %w", err)
+	}
+
+	// Find project
+	project := projects.FindByName(projectName)
+	if project == nil {
+		return fmt.Errorf("project '%s' not found", projectName)
+	}
+
+	// Add tag
+	if project.HasTag(tagName) {
+		return fmt.Errorf("project already has tag '%s'", tagName)
+	}
+	project.AddTag(tagName)
+
+	// Save
+	if err := store.SaveProjects(projects); err != nil {
+		return fmt.Errorf("failed to save projects: %w", err)
+	}
+
+	// Output
+	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
+	fmt.Println(formatter.FormatSuccess(fmt.Sprintf("Added tag '%s' to project '%s'", tagName, projectName)))
+
+	return nil
+}
+
+func runTagRemove(cmd *cobra.Command, args []string) error {
+	projectName := args[0]
+	tagName := args[1]
+
+	// Load config
+	cfg, err := config.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Initialize storage
+	store, err := storage.NewStorage(cfg.GetProjectsLocation())
+	if err != nil {
+		return fmt.Errorf("failed to initialize storage: %w", err)
+	}
+
+	// Load projects
+	projects, err := store.LoadProjects()
+	if err != nil {
+		return fmt.Errorf("failed to load projects: %w", err)
+	}
+
+	// Find project
+	project := projects.FindByName(projectName)
+	if project == nil {
+		return fmt.Errorf("project '%s' not found", projectName)
+	}
+
+	// Remove tag
+	if !project.HasTag(tagName) {
+		return fmt.Errorf("project does not have tag '%s'", tagName)
+	}
+	project.RemoveTag(tagName)
+
+	// Save
+	if err := store.SaveProjects(projects); err != nil {
+		return fmt.Errorf("failed to save projects: %w", err)
+	}
+
+	// Output
+	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
+	fmt.Println(formatter.FormatSuccess(fmt.Sprintf("Removed tag '%s' from project '%s'", tagName, projectName)))
+
+	return nil
+}
+
+func runTagList(cmd *cobra.Command, args []string) error {
+	// Load config
+	cfg, err := config.LoadOrCreateConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
+
+	if len(cfg.Tags) == 0 {
+		fmt.Println(formatter.FormatInfo("No tags configured"))
+		return nil
+	}
+
+	fmt.Println("Available tags:")
+	for _, tag := range cfg.Tags {
+		fmt.Printf("  - %s\n", tag)
+	}
+
+	return nil
+}
