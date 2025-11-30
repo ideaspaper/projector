@@ -45,6 +45,7 @@ changelog:
 
 homebrew_casks:
   - name: projector-cli
+    binary: projector
     repository:
       owner: ideaspaper
       name: homebrew-tap
