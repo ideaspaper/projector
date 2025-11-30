@@ -17,6 +17,13 @@ A powerful command-line project manager inspired by the [VS Code Project Manager
 
 ## Installation
 
+### Using Homebrew
+
+```bash
+brew tap ideaspaper/tap
+brew install --cask projector
+```
+
 ### Using `go install`
 
 ```bash
