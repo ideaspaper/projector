@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -14,6 +13,27 @@ import (
 	"github.com/anpan/projector/pkg/models"
 	"github.com/anpan/projector/pkg/output"
 	"github.com/anpan/projector/pkg/storage"
+)
+
+// Editor constants for supported editors
+const (
+	EditorCode     = "code"
+	EditorVSCode   = "vscode"
+	EditorCursor   = "cursor"
+	EditorSublime  = "subl"
+	EditorSublAlt  = "sublime"
+	EditorAtom     = "atom"
+	EditorVim      = "vim"
+	EditorNeoVim   = "nvim"
+	EditorEmacs    = "emacs"
+	EditorIdea     = "idea"
+	EditorIntelliJ = "intellij"
+	EditorWebStorm = "webstorm"
+	EditorGoLand   = "goland"
+	EditorPyCharm  = "pycharm"
+	EditorOpen     = "open"     // macOS
+	EditorXdgOpen  = "xdg-open" // Linux
+	EditorExplorer = "explorer" // Windows
 )
 
 var (
@@ -198,69 +218,69 @@ func openInEditor(path, editor string, newWindow bool) error {
 	var cmd *exec.Cmd
 
 	switch editor {
-	case "code", "vscode":
+	case EditorCode, EditorVSCode:
 		args := []string{path}
 		if newWindow {
 			args = append([]string{"--new-window"}, args...)
 		}
-		cmd = exec.Command("code", args...)
+		cmd = exec.Command(EditorCode, args...)
 
-	case "cursor":
+	case EditorCursor:
 		args := []string{path}
 		if newWindow {
 			args = append([]string{"--new-window"}, args...)
 		}
-		cmd = exec.Command("cursor", args...)
+		cmd = exec.Command(EditorCursor, args...)
 
-	case "subl", "sublime":
+	case EditorSublime, EditorSublAlt:
 		args := []string{path}
 		if newWindow {
 			args = append([]string{"--new-window"}, args...)
 		}
-		cmd = exec.Command("subl", args...)
+		cmd = exec.Command(EditorSublime, args...)
 
-	case "atom":
+	case EditorAtom:
 		args := []string{path}
 		if newWindow {
 			args = append([]string{"--new-window"}, args...)
 		}
-		cmd = exec.Command("atom", args...)
+		cmd = exec.Command(EditorAtom, args...)
 
-	case "vim", "nvim":
+	case EditorVim, EditorNeoVim:
 		cmd = exec.Command(editor, path)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-	case "emacs":
-		cmd = exec.Command("emacs", path)
+	case EditorEmacs:
+		cmd = exec.Command(EditorEmacs, path)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-	case "idea", "intellij":
-		cmd = exec.Command("idea", path)
+	case EditorIdea, EditorIntelliJ:
+		cmd = exec.Command(EditorIdea, path)
 
-	case "webstorm":
-		cmd = exec.Command("webstorm", path)
+	case EditorWebStorm:
+		cmd = exec.Command(EditorWebStorm, path)
 
-	case "goland":
-		cmd = exec.Command("goland", path)
+	case EditorGoLand:
+		cmd = exec.Command(EditorGoLand, path)
 
-	case "pycharm":
-		cmd = exec.Command("pycharm", path)
+	case EditorPyCharm:
+		cmd = exec.Command(EditorPyCharm, path)
 
-	case "open":
+	case EditorOpen:
 		// macOS open command
-		cmd = exec.Command("open", path)
+		cmd = exec.Command(EditorOpen, path)
 
-	case "xdg-open":
+	case EditorXdgOpen:
 		// Linux open command
-		cmd = exec.Command("xdg-open", path)
+		cmd = exec.Command(EditorXdgOpen, path)
 
-	case "explorer":
+	case EditorExplorer:
 		// Windows Explorer
-		cmd = exec.Command("explorer", path)
+		cmd = exec.Command(EditorExplorer, path)
 
 	default:
 		// Try to run the editor directly
@@ -268,10 +288,8 @@ func openInEditor(path, editor string, newWindow bool) error {
 	}
 
 	// For GUI editors, don't wait
-	if editor != "vim" && editor != "nvim" && editor != "emacs" {
-		if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-			return cmd.Start()
-		}
+	if editor != EditorVim && editor != EditorNeoVim && editor != EditorEmacs {
+		return cmd.Start()
 	}
 
 	return cmd.Run()

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/anpan/projector/pkg/models"
+	"github.com/anpan/projector/pkg/paths"
 )
 
 // ScannerType represents the type of repository scanner
@@ -20,6 +21,9 @@ const (
 	ScannerAny       ScannerType = "any"
 )
 
+// ErrorHandler is a callback for handling scan errors
+type ErrorHandler func(path string, err error)
+
 // Scanner scans directories for projects
 type Scanner struct {
 	baseFolders          []string
@@ -28,6 +32,7 @@ type Scanner struct {
 	scannerType          ScannerType
 	ignoreWithinProjects bool
 	supportSymlinks      bool
+	errorHandler         ErrorHandler
 }
 
 // NewScanner creates a new project scanner
@@ -44,7 +49,7 @@ func NewScanner(scannerType ScannerType) *Scanner {
 
 // SetBaseFolders sets the base folders to scan
 func (s *Scanner) SetBaseFolders(folders []string) {
-	s.baseFolders = expandPaths(folders)
+	s.baseFolders = paths.ExpandAll(folders)
 }
 
 // SetIgnoredFolders sets the folders to ignore during scanning
@@ -67,6 +72,18 @@ func (s *Scanner) SetSupportSymlinks(support bool) {
 	s.supportSymlinks = support
 }
 
+// SetErrorHandler sets the callback for handling scan errors
+func (s *Scanner) SetErrorHandler(handler ErrorHandler) {
+	s.errorHandler = handler
+}
+
+// logError calls the error handler if set
+func (s *Scanner) logError(path string, err error) {
+	if s.errorHandler != nil {
+		s.errorHandler(path, err)
+	}
+}
+
 // Scan scans all base folders for projects
 func (s *Scanner) Scan() ([]*models.Project, error) {
 	var projects []*models.Project
@@ -74,11 +91,13 @@ func (s *Scanner) Scan() ([]*models.Project, error) {
 
 	for _, baseFolder := range s.baseFolders {
 		if _, err := os.Stat(baseFolder); os.IsNotExist(err) {
+			s.logError(baseFolder, fmt.Errorf("base folder does not exist: %w", err))
 			continue
 		}
 
 		found, err := s.scanFolder(baseFolder, 0, false)
 		if err != nil {
+			s.logError(baseFolder, fmt.Errorf("failed to scan folder: %w", err))
 			continue
 		}
 
@@ -148,6 +167,7 @@ func (s *Scanner) scanFolder(folder string, depth int, insideProject bool) ([]*m
 	// Scan subdirectories
 	entries, err := os.ReadDir(folder)
 	if err != nil {
+		s.logError(folder, fmt.Errorf("failed to read directory: %w", err))
 		return projects, nil
 	}
 
@@ -178,6 +198,7 @@ func (s *Scanner) scanFolder(folder string, depth int, insideProject bool) ([]*m
 			// Resolve symlink
 			resolved, err := filepath.EvalSymlinks(subPath)
 			if err != nil {
+				s.logError(subPath, fmt.Errorf("failed to resolve symlink: %w", err))
 				continue
 			}
 			subPath = resolved
@@ -185,6 +206,7 @@ func (s *Scanner) scanFolder(folder string, depth int, insideProject bool) ([]*m
 
 		subProjects, err := s.scanFolder(subPath, depth+1, insideProject)
 		if err != nil {
+			s.logError(subPath, fmt.Errorf("failed to scan subfolder: %w", err))
 			continue
 		}
 		projects = append(projects, subProjects...)
@@ -266,27 +288,4 @@ func fileExistsWithExt(folder, ext string) bool {
 		}
 	}
 	return false
-}
-
-// expandPaths expands ~ and $home in all paths
-func expandPaths(paths []string) []string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return paths
-	}
-
-	result := make([]string, len(paths))
-	for i, path := range paths {
-		if strings.HasPrefix(path, "~") {
-			path = strings.Replace(path, "~", home, 1)
-		}
-		if strings.HasPrefix(path, "$home") {
-			path = strings.Replace(path, "$home", home, 1)
-		}
-		if strings.HasPrefix(path, "$HOME") {
-			path = strings.Replace(path, "$HOME", home, 1)
-		}
-		result[i] = path
-	}
-	return result
 }

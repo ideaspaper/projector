@@ -8,6 +8,9 @@ import (
 )
 
 var (
+	// version is set at build time via ldflags
+	version = "dev"
+
 	// Global flags
 	noColor bool
 	verbose bool
@@ -41,7 +44,7 @@ Examples:
 
   # Filter projects by tag
   projector list --tag Work`,
-	Version: "0.1.0",
+	Version: version,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

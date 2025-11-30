@@ -324,6 +324,11 @@ func init() {
 }
 
 func runScan(cmd *cobra.Command, args []string) error {
+	// Validate depth flag
+	if scanDepth < 0 {
+		return fmt.Errorf("--depth must be a non-negative integer, got %d", scanDepth)
+	}
+
 	// Load config
 	cfg, err := config.LoadOrCreateConfig()
 	if err != nil {

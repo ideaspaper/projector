@@ -1,5 +1,7 @@
 package models
 
+import "strings"
+
 // ProjectKind represents the type/source of a project
 type ProjectKind string
 
@@ -79,10 +81,10 @@ func (pl *ProjectList) Add(project *Project) {
 	pl.Projects = append(pl.Projects, project)
 }
 
-// Remove removes a project by name
+// Remove removes a project by name (case-insensitive)
 func (pl *ProjectList) Remove(name string) bool {
 	for i, p := range pl.Projects {
-		if p.Name == name {
+		if strings.EqualFold(p.Name, name) {
 			pl.Projects = append(pl.Projects[:i], pl.Projects[i+1:]...)
 			return true
 		}
@@ -90,10 +92,10 @@ func (pl *ProjectList) Remove(name string) bool {
 	return false
 }
 
-// FindByName finds a project by its name
+// FindByName finds a project by its name (case-insensitive)
 func (pl *ProjectList) FindByName(name string) *Project {
 	for _, p := range pl.Projects {
-		if p.Name == name {
+		if strings.EqualFold(p.Name, name) {
 			return p
 		}
 	}

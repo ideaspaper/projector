@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/anpan/projector/pkg/models"
+	"github.com/anpan/projector/pkg/paths"
 )
 
 const (
@@ -84,7 +84,7 @@ func (s *Storage) LoadProjects() (*models.ProjectList, error) {
 
 	for _, p := range projects {
 		p.Kind = models.KindFavorite
-		p.RootPath = expandPath(p.RootPath)
+		p.RootPath = paths.Expand(p.RootPath)
 		projectList.Projects = append(projectList.Projects, p)
 	}
 
@@ -101,7 +101,7 @@ func (s *Storage) SaveProjects(projects *models.ProjectList) error {
 	for i, p := range projects.Projects {
 		saveProjects[i] = &models.Project{
 			Name:     p.Name,
-			RootPath: collapsePath(p.RootPath),
+			RootPath: paths.Collapse(p.RootPath),
 			Tags:     p.Tags,
 			Enabled:  p.Enabled,
 		}
@@ -141,23 +141,23 @@ func (s *Storage) LoadCache() (*CachedProjects, error) {
 
 	// Expand paths and set kinds
 	for _, p := range cache.Git {
-		p.RootPath = expandPath(p.RootPath)
+		p.RootPath = paths.Expand(p.RootPath)
 		p.Kind = models.KindGit
 	}
 	for _, p := range cache.SVN {
-		p.RootPath = expandPath(p.RootPath)
+		p.RootPath = paths.Expand(p.RootPath)
 		p.Kind = models.KindSVN
 	}
 	for _, p := range cache.Mercurial {
-		p.RootPath = expandPath(p.RootPath)
+		p.RootPath = paths.Expand(p.RootPath)
 		p.Kind = models.KindMercurial
 	}
 	for _, p := range cache.VSCode {
-		p.RootPath = expandPath(p.RootPath)
+		p.RootPath = paths.Expand(p.RootPath)
 		p.Kind = models.KindVSCode
 	}
 	for _, p := range cache.Any {
-		p.RootPath = expandPath(p.RootPath)
+		p.RootPath = paths.Expand(p.RootPath)
 		p.Kind = models.KindAny
 	}
 
@@ -175,7 +175,7 @@ func (s *Storage) SaveCache(cache *CachedProjects) error {
 		for i, p := range projects {
 			result[i] = &models.Project{
 				Name:     p.Name,
-				RootPath: collapsePath(p.RootPath),
+				RootPath: paths.Collapse(p.RootPath),
 				Tags:     p.Tags,
 				Enabled:  p.Enabled,
 			}
@@ -214,44 +214,4 @@ func (s *Storage) ClearCache() error {
 		return fmt.Errorf("failed to remove cache file: %w", err)
 	}
 	return nil
-}
-
-// expandPath expands ~ and $home to the actual home directory
-func expandPath(path string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return path
-	}
-
-	if strings.HasPrefix(path, "~") {
-		path = strings.Replace(path, "~", home, 1)
-	}
-	if strings.HasPrefix(path, "$home") {
-		path = strings.Replace(path, "$home", home, 1)
-	}
-	if strings.HasPrefix(path, "$HOME") {
-		path = strings.Replace(path, "$HOME", home, 1)
-	}
-
-	return path
-}
-
-// collapsePath replaces home directory with ~
-func collapsePath(path string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return path
-	}
-
-	if strings.HasPrefix(path, home) {
-		return strings.Replace(path, home, "~", 1)
-	}
-
-	return path
-}
-
-// PathExists checks if a path exists
-func PathExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }

@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+
+	"github.com/anpan/projector/pkg/paths"
 )
 
 const (
@@ -282,33 +284,13 @@ func (c *Config) Save() error {
 // GetProjectsLocation returns the effective projects location
 func (c *Config) GetProjectsLocation() string {
 	if c.ProjectsLocation != "" {
-		return expandPath(c.ProjectsLocation)
+		return paths.Expand(c.ProjectsLocation)
 	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return ""
 	}
 	return filepath.Join(homeDir, ".projector")
-}
-
-// expandPath expands ~ and $home to the actual home directory
-func expandPath(path string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return path
-	}
-
-	if strings.HasPrefix(path, "~") {
-		path = strings.Replace(path, "~", home, 1)
-	}
-	if strings.HasPrefix(path, "$home") {
-		path = strings.Replace(path, "$home", home, 1)
-	}
-	if strings.HasPrefix(path, "$HOME") {
-		path = strings.Replace(path, "$HOME", home, 1)
-	}
-
-	return path
 }
 
 // LoadOrCreateConfig loads existing config or creates a new one with defaults
