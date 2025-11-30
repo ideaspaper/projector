@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/anpan/projector/pkg/paths"
+	"github.com/ideaspaper/projector/pkg/paths"
 )
 
 func TestDefaultConfig(t *testing.T) {

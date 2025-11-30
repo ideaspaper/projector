@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/anpan/projector/pkg/models"
-	"github.com/anpan/projector/pkg/paths"
+	"github.com/ideaspaper/projector/pkg/models"
+	"github.com/ideaspaper/projector/pkg/paths"
 )
 
 // ScannerType represents the type of repository scanner

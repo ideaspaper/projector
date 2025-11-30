@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/anpan/projector/pkg/models"
-	"github.com/anpan/projector/pkg/paths"
+	"github.com/ideaspaper/projector/pkg/models"
+	"github.com/ideaspaper/projector/pkg/paths"
 )
 
 func TestNewScanner(t *testing.T) {

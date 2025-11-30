@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/anpan/projector/cmd"
+	"github.com/ideaspaper/projector/cmd"
 )
 
 func main() {

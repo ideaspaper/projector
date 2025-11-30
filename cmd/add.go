@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/anpan/projector/pkg/config"
-	"github.com/anpan/projector/pkg/models"
-	"github.com/anpan/projector/pkg/output"
-	"github.com/anpan/projector/pkg/storage"
+	"github.com/ideaspaper/projector/pkg/config"
+	"github.com/ideaspaper/projector/pkg/models"
+	"github.com/ideaspaper/projector/pkg/output"
+	"github.com/ideaspaper/projector/pkg/storage"
 )
 
 var (

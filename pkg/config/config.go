@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/anpan/projector/pkg/paths"
+	"github.com/ideaspaper/projector/pkg/paths"
 )
 
 const (

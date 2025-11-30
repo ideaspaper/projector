@@ -1,4 +1,4 @@
-module github.com/anpan/projector
+module github.com/ideaspaper/projector
 
 go 1.24.4
 

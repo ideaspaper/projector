@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anpan/projector/pkg/models"
-	"github.com/anpan/projector/pkg/paths"
+	"github.com/ideaspaper/projector/pkg/models"
+	"github.com/ideaspaper/projector/pkg/paths"
 )
 
 func TestNewStorage(t *testing.T) {

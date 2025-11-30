@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"github.com/anpan/projector/pkg/models"
+	"github.com/ideaspaper/projector/pkg/models"
 )
 
 // Formatter handles output formatting
