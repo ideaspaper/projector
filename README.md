@@ -21,7 +21,7 @@ A powerful command-line project manager inspired by the [VS Code Project Manager
 
 ```bash
 brew tap ideaspaper/tap
-brew install --cask projector
+brew install --cask projector-cli
 ```
 
 ### Using `go install`
