@@ -251,17 +251,26 @@ func runSelect(cmd *cobra.Command, args []string) error {
 	// Sort by name
 	sortProjects(allProjects, config.SortByName)
 
-	// Display list
-	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
-	fmt.Println("Select a project:")
-	fmt.Println()
-	for i, p := range allProjects {
-		fmt.Println(formatter.FormatProjectCompact(p, i))
+	// Open /dev/tty for interactive output (works even when stdout is redirected)
+	tty, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0)
+	if err != nil {
+		// Fallback to stdout if /dev/tty is not available
+		tty = os.Stdout
+	} else {
+		defer tty.Close()
 	}
-	fmt.Println()
 
-	// Read selection
-	fmt.Print("Enter project number: ")
+	// Display list to tty
+	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
+	fmt.Fprintln(tty, "Select a project:")
+	fmt.Fprintln(tty)
+	for i, p := range allProjects {
+		fmt.Fprintln(tty, formatter.FormatProjectCompact(p, i))
+	}
+	fmt.Fprintln(tty)
+
+	// Read selection (prompt to tty)
+	fmt.Fprint(tty, "Enter project number: ")
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {
@@ -276,7 +285,7 @@ func runSelect(cmd *cobra.Command, args []string) error {
 
 	selected := allProjects[index]
 
-	// Output the selected project path
+	// Output the selected project path to stdout
 	fmt.Println(selected.RootPath)
 
 	return nil

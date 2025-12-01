@@ -323,6 +323,18 @@ projector select
 
 Displays a numbered list of projects and prompts for selection. Outputs the selected project's path.
 
+**Shell Function for cd:**
+
+Add this to your `.bashrc` or `.zshrc` to create a `pjcd` command that selects a project and changes to its directory:
+
+```bash
+pjcd() {
+  local dir
+  dir=$(projector select)
+  [ -n "$dir" ] && [ -d "$dir" ] && cd "$dir"
+}
+```
+
 ### tag
 
 Manage project tags.
