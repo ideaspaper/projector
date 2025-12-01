@@ -237,8 +237,8 @@ func runSelect(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Sort by name
-	sortProjects(allProjects, config.SortByName)
+	// Sort according to config
+	sortProjects(allProjects, cfg.SortList)
 
 	// Open /dev/tty for interactive output (works even when stdout is redirected)
 	var tty *os.File

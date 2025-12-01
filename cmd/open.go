@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -182,10 +181,8 @@ func runOpen(cmd *cobra.Command, args []string) error {
 
 // selectProjectInteractive shows an interactive selection menu
 func selectProjectInteractive(projects []*models.Project, cfg *config.Config) (*models.Project, error) {
-	// Sort by name
-	sort.Slice(projects, func(i, j int) bool {
-		return strings.ToLower(projects[i].Name) < strings.ToLower(projects[j].Name)
-	})
+	// Sort according to config
+	sortProjects(projects, cfg.SortList)
 
 	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
 	fmt.Println("Select a project to open:")
