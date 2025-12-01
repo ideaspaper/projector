@@ -215,3 +215,27 @@ func (s *Storage) ClearCache() error {
 	}
 	return nil
 }
+
+// LoadAllProjects loads all projects from both favorites and cache
+func (s *Storage) LoadAllProjects() ([]*models.Project, error) {
+	var allProjects []*models.Project
+
+	// Load favorites
+	projects, err := s.LoadProjects()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load projects: %w", err)
+	}
+	allProjects = append(allProjects, projects.Projects...)
+
+	// Load cache (errors are non-fatal for cache)
+	cache, _ := s.LoadCache()
+	if cache != nil {
+		allProjects = append(allProjects, cache.Git...)
+		allProjects = append(allProjects, cache.SVN...)
+		allProjects = append(allProjects, cache.Mercurial...)
+		allProjects = append(allProjects, cache.VSCode...)
+		allProjects = append(allProjects, cache.Any...)
+	}
+
+	return allProjects, nil
+}

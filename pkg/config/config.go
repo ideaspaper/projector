@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -132,17 +133,9 @@ func detectDefaultEditor() string {
 		return editor
 	}
 
-	// Check for VS Code
-	if _, err := os.Stat("/usr/local/bin/code"); err == nil {
+	// Check for VS Code using exec.LookPath (more portable)
+	if _, err := exec.LookPath("code"); err == nil {
 		return "code"
-	}
-	if _, err := os.Stat("/usr/bin/code"); err == nil {
-		return "code"
-	}
-	if runtime.GOOS == "darwin" {
-		if _, err := os.Stat("/Applications/Visual Studio Code.app"); err == nil {
-			return "code"
-		}
 	}
 
 	// Fallback options

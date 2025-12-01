@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -135,7 +138,20 @@ func runEdit(cmd *cobra.Command, args []string) error {
 	}
 
 	if editPath != "" {
-		project.RootPath = editPath
+		// Resolve to absolute path
+		absPath, err := filepath.Abs(editPath)
+		if err != nil {
+			return fmt.Errorf("failed to resolve path: %w", err)
+		}
+		// Check if path exists
+		info, err := os.Stat(absPath)
+		if err != nil {
+			return fmt.Errorf("path does not exist: %s", absPath)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("path is not a directory: %s", absPath)
+		}
+		project.RootPath = absPath
 		changed = true
 	}
 
@@ -205,7 +221,11 @@ func init() {
 
 func runTagAdd(cmd *cobra.Command, args []string) error {
 	projectName := args[0]
-	tagName := args[1]
+	tagName := strings.TrimSpace(args[1])
+
+	if tagName == "" {
+		return fmt.Errorf("tag name cannot be empty")
+	}
 
 	// Load config
 	cfg, err := config.LoadOrCreateConfig()
@@ -251,7 +271,11 @@ func runTagAdd(cmd *cobra.Command, args []string) error {
 
 func runTagRemove(cmd *cobra.Command, args []string) error {
 	projectName := args[0]
-	tagName := args[1]
+	tagName := strings.TrimSpace(args[1])
+
+	if tagName == "" {
+		return fmt.Errorf("tag name cannot be empty")
+	}
 
 	// Load config
 	cfg, err := config.LoadOrCreateConfig()

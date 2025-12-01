@@ -39,6 +39,7 @@ const (
 var (
 	openNewWindow bool
 	openEditor    string
+	openTag       string
 )
 
 // openCmd represents the open command
@@ -57,7 +58,10 @@ Examples:
   projector open myproject --new-window
 
   # Open with a specific editor
-  projector open myproject --editor vim`,
+  projector open myproject --editor vim
+
+  # Filter interactive selection by tag
+  projector open --tag Work`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runOpen,
 }
@@ -67,6 +71,7 @@ func init() {
 
 	openCmd.Flags().BoolVarP(&openNewWindow, "new-window", "n", false, "open in a new window")
 	openCmd.Flags().StringVarP(&openEditor, "editor", "e", "", "editor to use (overrides config)")
+	openCmd.Flags().StringVarP(&openTag, "tag", "t", "", "filter projects by tag")
 }
 
 func runOpen(cmd *cobra.Command, args []string) error {
@@ -83,22 +88,9 @@ func runOpen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Collect all projects
-	var allProjects []*models.Project
-
-	projects, err := store.LoadProjects()
+	allProjects, err := store.LoadAllProjects()
 	if err != nil {
 		return fmt.Errorf("failed to load projects: %w", err)
-	}
-	allProjects = append(allProjects, projects.Projects...)
-
-	// Load cache
-	cache, _ := store.LoadCache()
-	if cache != nil {
-		allProjects = append(allProjects, cache.Git...)
-		allProjects = append(allProjects, cache.SVN...)
-		allProjects = append(allProjects, cache.Mercurial...)
-		allProjects = append(allProjects, cache.VSCode...)
-		allProjects = append(allProjects, cache.Any...)
 	}
 
 	// Filter enabled only
@@ -109,6 +101,17 @@ func runOpen(cmd *cobra.Command, args []string) error {
 		}
 	}
 	allProjects = filtered
+
+	// Filter by tag if specified
+	if openTag != "" {
+		filtered := make([]*models.Project, 0)
+		for _, p := range allProjects {
+			if p.HasTag(openTag) {
+				filtered = append(filtered, p)
+			}
+		}
+		allProjects = filtered
+	}
 
 	if len(allProjects) == 0 {
 		return fmt.Errorf("no projects found")

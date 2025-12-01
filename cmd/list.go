@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -217,22 +218,9 @@ func runSelect(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load all projects
-	var allProjects []*models.Project
-
-	projects, err := store.LoadProjects()
+	allProjects, err := store.LoadAllProjects()
 	if err != nil {
 		return fmt.Errorf("failed to load projects: %w", err)
-	}
-	allProjects = append(allProjects, projects.Projects...)
-
-	// Load cache
-	cache, _ := store.LoadCache()
-	if cache != nil {
-		allProjects = append(allProjects, cache.Git...)
-		allProjects = append(allProjects, cache.SVN...)
-		allProjects = append(allProjects, cache.Mercurial...)
-		allProjects = append(allProjects, cache.VSCode...)
-		allProjects = append(allProjects, cache.Any...)
 	}
 
 	// Filter enabled only
@@ -253,7 +241,12 @@ func runSelect(cmd *cobra.Command, args []string) error {
 	sortProjects(allProjects, config.SortByName)
 
 	// Open /dev/tty for interactive output (works even when stdout is redirected)
-	tty, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0)
+	var tty *os.File
+	if runtime.GOOS == "windows" {
+		tty, err = os.OpenFile("CON", os.O_WRONLY, 0)
+	} else {
+		tty, err = os.OpenFile("/dev/tty", os.O_WRONLY, 0)
+	}
 	if err != nil {
 		// Fallback to stdout if /dev/tty is not available
 		tty = os.Stdout
@@ -382,7 +375,9 @@ func runScan(cmd *cobra.Command, args []string) error {
 			s.SetSupportSymlinks(cfg.SupportSymlinks)
 
 			projects, err := s.Scan()
-			if err == nil {
+			if err != nil {
+				fmt.Println(formatter.FormatWarning(fmt.Sprintf("Error scanning Git repositories: %v", err)))
+			} else {
 				cache.Git = projects
 				fmt.Println(formatter.FormatInfo(fmt.Sprintf("Found %d Git repositories", len(projects))))
 			}
@@ -406,7 +401,9 @@ func runScan(cmd *cobra.Command, args []string) error {
 			s.SetMaxDepth(depth)
 
 			projects, err := s.Scan()
-			if err == nil {
+			if err != nil {
+				fmt.Println(formatter.FormatWarning(fmt.Sprintf("Error scanning SVN repositories: %v", err)))
+			} else {
 				cache.SVN = projects
 				fmt.Println(formatter.FormatInfo(fmt.Sprintf("Found %d SVN repositories", len(projects))))
 			}
@@ -430,7 +427,9 @@ func runScan(cmd *cobra.Command, args []string) error {
 			s.SetMaxDepth(depth)
 
 			projects, err := s.Scan()
-			if err == nil {
+			if err != nil {
+				fmt.Println(formatter.FormatWarning(fmt.Sprintf("Error scanning Mercurial repositories: %v", err)))
+			} else {
 				cache.Mercurial = projects
 				fmt.Println(formatter.FormatInfo(fmt.Sprintf("Found %d Mercurial repositories", len(projects))))
 			}
@@ -454,7 +453,9 @@ func runScan(cmd *cobra.Command, args []string) error {
 			s.SetMaxDepth(depth)
 
 			projects, err := s.Scan()
-			if err == nil {
+			if err != nil {
+				fmt.Println(formatter.FormatWarning(fmt.Sprintf("Error scanning VS Code workspaces: %v", err)))
+			} else {
 				cache.VSCode = projects
 				fmt.Println(formatter.FormatInfo(fmt.Sprintf("Found %d VS Code workspaces", len(projects))))
 			}
@@ -478,7 +479,9 @@ func runScan(cmd *cobra.Command, args []string) error {
 			s.SetMaxDepth(depth)
 
 			projects, err := s.Scan()
-			if err == nil {
+			if err != nil {
+				fmt.Println(formatter.FormatWarning(fmt.Sprintf("Error scanning folders: %v", err)))
+			} else {
 				cache.Any = projects
 				fmt.Println(formatter.FormatInfo(fmt.Sprintf("Found %d folders", len(projects))))
 			}

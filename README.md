@@ -158,6 +158,8 @@ List all saved and detected projects.
 projector list [flags]
 ```
 
+**Aliases:** `ls`
+
 **Flags:**
 | Flag | Short | Description |
 |------|-------|-------------|
@@ -170,6 +172,7 @@ projector list [flags]
 | `--svn` | | Show only SVN repositories |
 | `--mercurial` | | Show only Mercurial repositories |
 | `--vscode` | | Show only VS Code workspaces |
+| `--any` | | Show only any-folder projects |
 
 **Examples:**
 
@@ -203,6 +206,7 @@ projector open [project-name] [flags]
 |------|-------|-------------|
 | `--new-window` | `-n` | Open in a new window |
 | `--editor` | `-e` | Editor to use (overrides config) |
+| `--tag` | `-t` | Filter projects by tag |
 
 **Supported Editors:**
 
@@ -216,6 +220,9 @@ projector open [project-name] [flags]
 - `webstorm` - WebStorm
 - `goland` - GoLand
 - `pycharm` - PyCharm
+- `open` - macOS default handler
+- `xdg-open` - Linux default handler
+- `explorer` - Windows Explorer
 
 **Examples:**
 
@@ -231,6 +238,9 @@ projector open myproject --editor vim
 
 # Interactive selection (no argument)
 projector open
+
+# Filter interactive selection by tag
+projector open --tag Work
 ```
 
 ### remove
@@ -344,11 +354,11 @@ projector tag <subcommand> [args]
 ```
 
 **Subcommands:**
-| Command | Description |
-|---------|-------------|
-| `add <project> <tag>` | Add a tag to a project |
-| `remove <project> <tag>` | Remove a tag from a project |
-| `list` | List all available tags |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `add <project> <tag>` | | Add a tag to a project |
+| `remove <project> <tag>` | `rm` | Remove a tag from a project |
+| `list` | `ls` | List all available tags |
 
 **Examples:**
 
@@ -412,19 +422,26 @@ Configuration is stored in `~/.projector/config.json`:
   "openInNewWindow": false,
   "tags": ["Personal", "Work"],
   "gitBaseFolders": ["~/projects", "~/work"],
-  "gitIgnoredFolders": ["node_modules", "vendor", ".git"],
+  "gitIgnoredFolders": [
+    "node_modules",
+    "out",
+    "typings",
+    "test",
+    ".haxelib",
+    "vendor"
+  ],
   "gitMaxDepthRecursion": 4,
   "svnBaseFolders": [],
-  "svnIgnoredFolders": ["node_modules"],
+  "svnIgnoredFolders": ["node_modules", "out", "typings", "test"],
   "svnMaxDepthRecursion": 4,
   "hgBaseFolders": [],
-  "hgIgnoredFolders": ["node_modules"],
+  "hgIgnoredFolders": ["node_modules", "out", "typings", "test", ".haxelib"],
   "hgMaxDepthRecursion": 4,
   "vscodeBaseFolders": [],
-  "vscodeIgnoredFolders": ["node_modules"],
+  "vscodeIgnoredFolders": ["node_modules", "out", "typings", "test"],
   "vscodeMaxDepthRecursion": 4,
   "anyBaseFolders": [],
-  "anyIgnoredFolders": ["node_modules"],
+  "anyIgnoredFolders": ["node_modules", "out", "typings", "test"],
   "anyMaxDepthRecursion": 4,
   "projectsLocation": ""
 }
@@ -442,8 +459,8 @@ Configuration is stored in `~/.projector/config.json`:
 | `openInNewWindow`                | Always open in new window                     | `false`                 |
 | `tags`                           | Available tags for organization               | `["Personal", "Work"]`  |
 | `gitBaseFolders`                 | Folders to scan for Git repos                 | `[]`                    |
-| `gitIgnoredFolders`              | Folders to skip when scanning                 | `["node_modules", ...]` |
-| `gitMaxDepthRecursion`           | Max depth for scanning                        | `4`                     |
+| `gitIgnoredFolders`              | Folders to skip when scanning Git             | `["node_modules", ...]` |
+| `gitMaxDepthRecursion`           | Max depth for Git scanning                    | `4`                     |
 | `cacheProjectsBetweenSessions`   | Cache detected projects                       | `true`                  |
 | `ignoreProjectsWithinProjects`   | Skip nested projects                          | `false`                 |
 | `supportSymlinksOnBaseFolders`   | Follow symlinks                               | `false`                 |
@@ -627,11 +644,12 @@ projector/
 │   ├── manage.go          # Remove, edit, tag commands
 │   └── completion.go      # Shell completions
 ├── pkg/
-│   ├── models/            # Data structures
 │   ├── config/            # Configuration
-│   ├── storage/           # JSON persistence
+│   ├── models/            # Data structures
+│   ├── output/            # Formatted output
+│   ├── paths/             # Path utilities
 │   ├── scanner/           # Repository detection
-│   └── output/            # Formatted output
+│   └── storage/           # JSON persistence
 ├── main.go
 ├── go.mod
 ├── Makefile
