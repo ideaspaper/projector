@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/ideaspaper/projector/pkg/config"
@@ -258,6 +259,10 @@ func runSelect(cmd *cobra.Command, args []string) error {
 		tty = os.Stdout
 	} else {
 		defer tty.Close()
+		// Force color output since we're writing to a terminal
+		if cfg.ShowColors && !noColor {
+			color.NoColor = false
+		}
 	}
 
 	// Display list to tty
