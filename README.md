@@ -434,29 +434,6 @@ Generate shell completion scripts.
 projector completion [bash|zsh|fish|powershell]
 ```
 
-**Setup:**
-
-```bash
-# Bash
-source <(projector completion bash)
-
-# To load for each session (Linux):
-projector completion bash > /etc/bash_completion.d/projector
-
-# To load for each session (macOS):
-projector completion bash > $(brew --prefix)/etc/bash_completion.d/projector
-
-# Zsh
-echo "autoload -U compinit; compinit" >> ~/.zshrc
-projector completion zsh > "${fpath[1]}/_projector"
-
-# Fish
-projector completion fish > ~/.config/fish/completions/projector.fish
-
-# PowerShell
-projector completion powershell | Out-String | Invoke-Expression
-```
-
 ## Configuration
 
 Configuration is stored in `~/.projector/config.json`:
