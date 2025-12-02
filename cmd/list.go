@@ -1,15 +1,11 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/ideaspaper/projector/pkg/config"
@@ -183,110 +179,6 @@ func sortProjects(projects []*models.Project, order config.SortOrder) {
 	case config.SortBySaved, config.SortByRecent:
 		// Keep original order for saved/recent
 	}
-}
-
-// selectCmd allows interactive project selection
-var selectCmd = &cobra.Command{
-	Use:   "select",
-	Short: "Interactively select a project",
-	Long: `Interactively select a project from the list.
-
-This command displays a numbered list of projects and allows you to
-select one by entering its number.
-
-Examples:
-  # Select a project interactively
-  projector select`,
-	RunE: runSelect,
-}
-
-func init() {
-	rootCmd.AddCommand(selectCmd)
-}
-
-func runSelect(cmd *cobra.Command, args []string) error {
-	// Load config
-	cfg, err := config.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	// Initialize storage
-	store, err := storage.NewStorage(cfg.GetProjectsLocation())
-	if err != nil {
-		return fmt.Errorf("failed to initialize storage: %w", err)
-	}
-
-	// Load all projects
-	allProjects, err := store.LoadAllProjects()
-	if err != nil {
-		return fmt.Errorf("failed to load projects: %w", err)
-	}
-
-	// Filter enabled only
-	filtered := make([]*models.Project, 0)
-	for _, p := range allProjects {
-		if p.Enabled {
-			filtered = append(filtered, p)
-		}
-	}
-	allProjects = filtered
-
-	if len(allProjects) == 0 {
-		fmt.Println("No projects found.")
-		return nil
-	}
-
-	// Sort according to config
-	sortProjects(allProjects, cfg.SortList)
-
-	// Open /dev/tty for interactive output (works even when stdout is redirected)
-	var tty *os.File
-	if runtime.GOOS == "windows" {
-		tty, err = os.OpenFile("CON", os.O_WRONLY, 0)
-	} else {
-		tty, err = os.OpenFile("/dev/tty", os.O_WRONLY, 0)
-	}
-	if err != nil {
-		// Fallback to stdout if /dev/tty is not available
-		tty = os.Stdout
-	} else {
-		defer tty.Close()
-		// Force color output since we're writing to a terminal
-		if cfg.ShowColors && !noColor {
-			color.NoColor = false
-		}
-	}
-
-	// Display list to tty
-	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
-	fmt.Fprintln(tty, "Select a project:")
-	fmt.Fprintln(tty)
-	for i, p := range allProjects {
-		fmt.Fprintln(tty, formatter.FormatProjectCompact(p, i))
-	}
-	fmt.Fprintln(tty)
-
-	// Read selection (prompt to tty)
-	fmt.Fprint(tty, "Enter project number: ")
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return err
-	}
-
-	input = strings.TrimSpace(input)
-	index, err := strconv.Atoi(input)
-	if err != nil || index < 0 || index >= len(allProjects) {
-		return fmt.Errorf("invalid selection: %s", input)
-	}
-
-	selected := allProjects[index]
-
-	// Output the selected project path to stdout
-	fmt.Println(selected.RootPath)
-
-	return nil
 }
 
 // scanCmd represents the scan command

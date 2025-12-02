@@ -2,6 +2,27 @@
 
 A powerful command-line project manager inspired by the [VS Code Project Manager](https://marketplace.visualstudio.com/items?itemName=alefragnani.project-manager) extension. Easily access your projects, organize them with tags, and auto-detect Git, SVN, and Mercurial repositories.
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Commands](#commands)
+  - [add](#add)
+  - [list](#list)
+  - [open](#open)
+  - [remove](#remove)
+  - [edit](#edit)
+  - [scan](#scan)
+  - [select](#select)
+  - [tag](#tag)
+  - [completion](#completion)
+- [Configuration](#configuration)
+- [Projects File](#projects-file)
+- [Global Flags](#global-flags)
+- [Examples](#examples)
+- [Troubleshooting](#troubleshooting)
+
 ## Features
 
 - Save any folder as a favorite project
@@ -325,13 +346,35 @@ projector scan --git --depth 3 ~/code
 
 ### select
 
-Interactively select a project.
+Select a project and output its path to stdout.
 
 ```bash
-projector select
+projector select [project-name] [flags]
 ```
 
-Displays a numbered list of projects and prompts for selection. Outputs the selected project's path.
+If no project name is provided, an interactive selection is shown.
+This is useful for scripting and shell integration.
+
+**Flags:**
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--tag` | `-t` | Filter projects by tag |
+
+**Examples:**
+
+```bash
+# Interactive selection
+projector select
+
+# Select by name
+projector select myproject
+
+# Select by partial name match
+projector select my
+
+# Filter interactive selection by tag
+projector select --tag Work
+```
 
 **Shell Function for cd:**
 
@@ -340,9 +383,19 @@ Add this to your `.bashrc` or `.zshrc` to create a `pjcd` command that selects a
 ```bash
 pjcd() {
   local dir
-  dir=$(projector select)
+  dir=$(projector select "$@")
   [ -n "$dir" ] && [ -d "$dir" ] && cd "$dir"
 }
+```
+
+Usage:
+
+```bash
+# Interactive selection
+pjcd
+
+# Direct selection by name
+pjcd myproject
 ```
 
 ### tag
@@ -534,7 +587,12 @@ projector remove "My Blog"
 #!/bin/bash
 # Open project in tmux session
 
-PROJECT=$(projector select 2>/dev/null)
+# Non-interactive: pass project name directly
+PROJECT=$(projector select myproject 2>/dev/null)
+
+# Or interactive: let user choose
+# PROJECT=$(projector select 2>/dev/null)
+
 if [ -n "$PROJECT" ]; then
     SESSION_NAME=$(basename "$PROJECT")
     tmux new-session -d -s "$SESSION_NAME" -c "$PROJECT"
@@ -641,6 +699,7 @@ projector/
 │   ├── add.go             # Add command
 │   ├── list.go            # List and scan commands
 │   ├── open.go            # Open command
+│   ├── select.go          # Select command
 │   ├── manage.go          # Remove, edit, tag commands
 │   └── completion.go      # Shell completions
 ├── pkg/
