@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"runtime"
+	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/ideaspaper/projector/pkg/config"
@@ -151,35 +155,57 @@ func runSelect(cmd *cobra.Command, args []string) error {
 }
 
 // selectProjectForSelect shows an interactive selection menu for the select command
-// It writes prompts to stderr so only the path goes to stdout
+// It writes prompts to /dev/tty so only the path goes to stdout
 func selectProjectForSelect(projects []*models.Project, cfg *config.Config) (*models.Project, error) {
 	// Sort according to config
 	sortProjects(projects, cfg.SortList)
 
+	// Open /dev/tty for interactive output (works even when stdout is redirected)
+	var tty *os.File
+	var err error
+	if runtime.GOOS == "windows" {
+		tty, err = os.OpenFile("CON", os.O_WRONLY, 0)
+	} else {
+		tty, err = os.OpenFile("/dev/tty", os.O_WRONLY, 0)
+	}
+	if err != nil {
+		// Fallback to stderr if /dev/tty is not available
+		tty = os.Stderr
+	} else {
+		defer tty.Close()
+		// Force color output since we're writing to a terminal
+		if cfg.ShowColors && !noColor {
+			color.NoColor = false
+		}
+	}
+
+	// Display list to tty
 	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
-	fmt.Fprintln(os.Stderr, "Select a project:")
-	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(tty, "Select a project:")
+	fmt.Fprintln(tty)
 
 	for i, p := range projects {
-		fmt.Fprintln(os.Stderr, formatter.FormatProjectCompact(p, i))
+		fmt.Fprintln(tty, formatter.FormatProjectCompact(p, i))
 	}
-	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(tty)
 
-	fmt.Fprint(os.Stderr, "Enter project number (or 'q' to quit): ")
-	var input string
-	fmt.Scanln(&input)
+	// Read selection (prompt to tty)
+	fmt.Fprint(tty, "Enter project number (or 'q' to quit): ")
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	input = strings.TrimSpace(input)
 
 	if input == "q" || input == "Q" {
 		os.Exit(0)
 	}
 
-	var index int
-	if _, err := fmt.Sscanf(input, "%d", &index); err != nil {
-		return nil, fmt.Errorf("invalid selection")
-	}
-
-	if index < 0 || index >= len(projects) {
-		return nil, fmt.Errorf("invalid selection: index out of range")
+	index, err := strconv.Atoi(input)
+	if err != nil || index < 0 || index >= len(projects) {
+		return nil, fmt.Errorf("invalid selection: %s", input)
 	}
 
 	return projects[index], nil
