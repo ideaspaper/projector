@@ -49,9 +49,6 @@ type Config struct {
 	Editor          string `json:"editor" mapstructure:"editor"`
 	OpenInNewWindow bool   `json:"openInNewWindow" mapstructure:"openInNewWindow"`
 
-	// Tags for organization
-	Tags []string `json:"tags" mapstructure:"tags"`
-
 	// Git settings
 	GitBaseFolders    []string `json:"gitBaseFolders" mapstructure:"gitBaseFolders"`
 	GitIgnoredFolders []string `json:"gitIgnoredFolders" mapstructure:"gitIgnoredFolders"`
@@ -101,8 +98,6 @@ func DefaultConfig() *Config {
 
 		Editor:          detectDefaultEditor(),
 		OpenInNewWindow: false,
-
-		Tags: []string{"Personal", "Work"},
 
 		GitBaseFolders:    []string{},
 		GitIgnoredFolders: []string{"node_modules", "out", "typings", "test", ".haxelib", "vendor"},
@@ -168,8 +163,6 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("editor", cfg.Editor)
 	v.SetDefault("openInNewWindow", cfg.OpenInNewWindow)
-
-	v.SetDefault("tags", cfg.Tags)
 
 	v.SetDefault("gitBaseFolders", cfg.GitBaseFolders)
 	v.SetDefault("gitIgnoredFolders", cfg.GitIgnoredFolders)

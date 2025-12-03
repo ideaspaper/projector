@@ -15,7 +15,7 @@ A powerful command-line project manager inspired by the [VS Code Project Manager
   - [edit](#edit)
   - [scan](#scan)
   - [select](#select)
-  - [tag](#tag)
+  - [tags](#tags)
   - [clear-cache](#clear-cache)
   - [completion](#completion)
 - [Configuration](#configuration)
@@ -335,6 +335,8 @@ projector edit <project-name> [flags]
 | `--name` | New project name |
 | `--path` | New project path |
 | `--enabled` | Enable/disable project (true/false) |
+| `--add-tag` | Add a tag to the project (can be repeated) |
+| `--remove-tag` | Remove a tag from the project (can be repeated) |
 
 **Examples:**
 
@@ -347,6 +349,15 @@ projector edit myproject --path ~/new/location
 
 # Disable a project
 projector edit myproject --enabled=false
+
+# Add tags
+projector edit myproject --add-tag Work --add-tag Important
+
+# Remove a tag
+projector edit myproject --remove-tag Old
+
+# Add and remove tags in one command
+projector edit myproject --add-tag Backend --remove-tag Frontend
 ```
 
 ### scan
@@ -461,32 +472,30 @@ pjcd
 pjcd myproject
 ```
 
-### tag
+### tags
 
-Manage project tags.
+List all unique tags currently in use by projects.
 
 ```bash
-projector tag <subcommand> [args]
+projector tags
 ```
-
-**Subcommands:**
-| Command | Aliases | Description |
-|---------|---------|-------------|
-| `add <project> <tag>` | | Add a tag to a project |
-| `remove <project> <tag>` | `rm` | Remove a tag from a project |
-| `list` | `ls` | List all available tags |
 
 **Examples:**
 
 ```bash
-# Add a tag
-projector tag add myproject Work
+# List all tags in use
+projector tags
+```
 
-# Remove a tag
-projector tag remove myproject Personal
+**Output:**
 
-# List available tags
-projector tag list
+```
+Tags in use:
+  - Backend
+  - Frontend
+  - Go
+  - Personal
+  - Work
 ```
 
 ### clear-cache
@@ -540,7 +549,6 @@ Configuration is stored in `~/.projector/config.json`:
   "supportSymlinksOnBaseFolders": false,
   "editor": "code",
   "openInNewWindow": false,
-  "tags": ["Personal", "Work"],
   "gitBaseFolders": ["~/projects", "~/work"],
   "gitIgnoredFolders": [
     "node_modules",
@@ -577,7 +585,6 @@ Configuration is stored in `~/.projector/config.json`:
 | `checkInvalidPathsBeforeListing` | Check if paths exist                                                     | `true`                  |
 | `editor`                         | Default editor command                                                   | `code`                  |
 | `openInNewWindow`                | Always open in new window                                                | `false`                 |
-| `tags`                           | Available tags for organization                                          | `["Personal", "Work"]`  |
 | `gitBaseFolders`                 | Folders to scan for Git repos                                            | `[]`                    |
 | `gitIgnoredFolders`              | Folders to skip when scanning Git                                        | `["node_modules", ...]` |
 | `gitMaxDepthRecursion`           | Max depth for Git scanning                                               | `4`                     |

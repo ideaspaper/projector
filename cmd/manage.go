@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -70,7 +71,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 var editCmd = &cobra.Command{
 	Use:   "edit <project-name>",
 	Short: "Edit a project's properties",
-	Long: `Edit a project's name, path, or tags.
+	Long: `Edit a project's name, path, tags, or enabled state.
 
 Examples:
   # Rename a project
@@ -80,15 +81,23 @@ Examples:
   projector edit myproject --path ~/new/path
 
   # Toggle enabled state
-  projector edit myproject --enabled=false`,
+  projector edit myproject --enabled=false
+
+  # Add tags
+  projector edit myproject --add-tag Work --add-tag Important
+
+  # Remove a tag
+  projector edit myproject --remove-tag Old`,
 	Args: cobra.ExactArgs(1),
 	RunE: runEdit,
 }
 
 var (
-	editName    string
-	editPath    string
-	editEnabled string
+	editName       string
+	editPath       string
+	editEnabled    string
+	editAddTags    []string
+	editRemoveTags []string
 )
 
 func init() {
@@ -97,6 +106,8 @@ func init() {
 	editCmd.Flags().StringVar(&editName, "name", "", "new project name")
 	editCmd.Flags().StringVar(&editPath, "path", "", "new project path")
 	editCmd.Flags().StringVar(&editEnabled, "enabled", "", "enable/disable project (true/false)")
+	editCmd.Flags().StringSliceVar(&editAddTags, "add-tag", []string{}, "add a tag to the project (can be used multiple times)")
+	editCmd.Flags().StringSliceVar(&editRemoveTags, "remove-tag", []string{}, "remove a tag from the project (can be used multiple times)")
 }
 
 func runEdit(cmd *cobra.Command, args []string) error {
@@ -165,8 +176,34 @@ func runEdit(cmd *cobra.Command, args []string) error {
 		changed = true
 	}
 
+	// Add tags
+	for _, tag := range editAddTags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+		if project.HasTag(tag) {
+			return fmt.Errorf("project already has tag '%s'", tag)
+		}
+		project.AddTag(tag)
+		changed = true
+	}
+
+	// Remove tags
+	for _, tag := range editRemoveTags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+		if !project.HasTag(tag) {
+			return fmt.Errorf("project does not have tag '%s'", tag)
+		}
+		project.RemoveTag(tag)
+		changed = true
+	}
+
 	if !changed {
-		return fmt.Errorf("no changes specified (use --name, --path, or --enabled)")
+		return fmt.Errorf("no changes specified (use --name, --path, --enabled, --add-tag, or --remove-tag)")
 	}
 
 	// Save
@@ -181,50 +218,19 @@ func runEdit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// tagCmd represents the tag command group
-var tagCmd = &cobra.Command{
-	Use:   "tag",
-	Short: "Manage project tags",
-	Long:  `Add, remove, or list tags for projects.`,
-}
-
-var tagAddCmd = &cobra.Command{
-	Use:   "add <project-name> <tag>",
-	Short: "Add a tag to a project",
-	Args:  cobra.ExactArgs(2),
-	RunE:  runTagAdd,
-}
-
-var tagRemoveCmd = &cobra.Command{
-	Use:     "remove <project-name> <tag>",
-	Short:   "Remove a tag from a project",
-	Aliases: []string{"rm"},
-	Args:    cobra.ExactArgs(2),
-	RunE:    runTagRemove,
-}
-
-var tagListCmd = &cobra.Command{
-	Use:     "list",
-	Short:   "List available tags",
-	Aliases: []string{"ls"},
-	RunE:    runTagList,
+// tagsCmd represents the tags command
+var tagsCmd = &cobra.Command{
+	Use:   "tags",
+	Short: "List all tags in use",
+	Long:  `List all unique tags currently used by projects.`,
+	RunE:  runTags,
 }
 
 func init() {
-	rootCmd.AddCommand(tagCmd)
-	tagCmd.AddCommand(tagAddCmd)
-	tagCmd.AddCommand(tagRemoveCmd)
-	tagCmd.AddCommand(tagListCmd)
+	rootCmd.AddCommand(tagsCmd)
 }
 
-func runTagAdd(cmd *cobra.Command, args []string) error {
-	projectName := args[0]
-	tagName := strings.TrimSpace(args[1])
-
-	if tagName == "" {
-		return fmt.Errorf("tag name cannot be empty")
-	}
-
+func runTags(cmd *cobra.Command, args []string) error {
 	// Load config
 	cfg, err := config.LoadOrCreateConfig()
 	if err != nil {
@@ -243,96 +249,30 @@ func runTagAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load projects: %w", err)
 	}
 
-	// Find project
-	project := projects.FindByName(projectName)
-	if project == nil {
-		return fmt.Errorf("project '%s' not found", projectName)
-	}
-
-	// Add tag
-	if project.HasTag(tagName) {
-		return fmt.Errorf("project already has tag '%s'", tagName)
-	}
-	project.AddTag(tagName)
-
-	// Save
-	if err := store.SaveProjects(projects); err != nil {
-		return fmt.Errorf("failed to save projects: %w", err)
-	}
-
-	// Output
-	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
-	fmt.Println(formatter.FormatSuccess(fmt.Sprintf("Added tag '%s' to project '%s'", tagName, projectName)))
-
-	return nil
-}
-
-func runTagRemove(cmd *cobra.Command, args []string) error {
-	projectName := args[0]
-	tagName := strings.TrimSpace(args[1])
-
-	if tagName == "" {
-		return fmt.Errorf("tag name cannot be empty")
-	}
-
-	// Load config
-	cfg, err := config.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	// Initialize storage
-	store, err := storage.NewStorage(cfg.GetProjectsLocation())
-	if err != nil {
-		return fmt.Errorf("failed to initialize storage: %w", err)
-	}
-
-	// Load projects
-	projects, err := store.LoadProjects()
-	if err != nil {
-		return fmt.Errorf("failed to load projects: %w", err)
-	}
-
-	// Find project
-	project := projects.FindByName(projectName)
-	if project == nil {
-		return fmt.Errorf("project '%s' not found", projectName)
-	}
-
-	// Remove tag
-	if !project.HasTag(tagName) {
-		return fmt.Errorf("project does not have tag '%s'", tagName)
-	}
-	project.RemoveTag(tagName)
-
-	// Save
-	if err := store.SaveProjects(projects); err != nil {
-		return fmt.Errorf("failed to save projects: %w", err)
-	}
-
-	// Output
-	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
-	fmt.Println(formatter.FormatSuccess(fmt.Sprintf("Removed tag '%s' from project '%s'", tagName, projectName)))
-
-	return nil
-}
-
-func runTagList(cmd *cobra.Command, args []string) error {
-	// Load config
-	cfg, err := config.LoadOrCreateConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+	// Collect unique tags from all projects
+	tagSet := make(map[string]struct{})
+	for _, p := range projects.Projects {
+		for _, tag := range p.Tags {
+			tagSet[tag] = struct{}{}
+		}
 	}
 
 	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
 
-	if len(cfg.Tags) == 0 {
-		fmt.Println(formatter.FormatInfo("No tags configured"))
+	if len(tagSet) == 0 {
+		fmt.Println(formatter.FormatInfo("No tags in use"))
 		return nil
 	}
 
-	fmt.Println("Available tags:")
-	for _, tag := range cfg.Tags {
+	// Convert to sorted slice
+	tags := make([]string, 0, len(tagSet))
+	for tag := range tagSet {
+		tags = append(tags, tag)
+	}
+	sort.Strings(tags)
+
+	fmt.Println("Tags in use:")
+	for _, tag := range tags {
 		fmt.Printf("  - %s\n", tag)
 	}
 

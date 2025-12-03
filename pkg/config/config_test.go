@@ -29,9 +29,6 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.GitMaxDepth != 4 {
 		t.Errorf("expected GitMaxDepth 4, got %d", cfg.GitMaxDepth)
 	}
-	if len(cfg.Tags) != 2 {
-		t.Errorf("expected 2 default tags, got %d", len(cfg.Tags))
-	}
 	if len(cfg.GitIgnoredFolders) == 0 {
 		t.Error("expected default GitIgnoredFolders")
 	}
@@ -81,7 +78,6 @@ func TestLoadConfigFromDir_ExistingConfig(t *testing.T) {
 		"groupList": true,
 		"showColors": false,
 		"editor": "vim",
-		"tags": ["Custom", "Tags"],
 		"gitMaxDepthRecursion": 10
 	}`
 	os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte(configContent), 0644)
@@ -103,9 +99,6 @@ func TestLoadConfigFromDir_ExistingConfig(t *testing.T) {
 	if cfg.Editor != "vim" {
 		t.Errorf("expected editor 'vim', got '%s'", cfg.Editor)
 	}
-	if len(cfg.Tags) != 2 || cfg.Tags[0] != "Custom" {
-		t.Errorf("expected custom tags, got %v", cfg.Tags)
-	}
 	if cfg.GitMaxDepth != 10 {
 		t.Errorf("expected GitMaxDepth 10, got %d", cfg.GitMaxDepth)
 	}
@@ -118,7 +111,6 @@ func TestConfig_Save(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.configPath = configPath
 	cfg.Editor = "cursor"
-	cfg.Tags = []string{"Test", "Tags"}
 
 	if err := cfg.Save(); err != nil {
 		t.Fatalf("Save failed: %v", err)
@@ -137,9 +129,6 @@ func TestConfig_Save(t *testing.T) {
 
 	if loaded.Editor != "cursor" {
 		t.Errorf("expected editor 'cursor', got '%s'", loaded.Editor)
-	}
-	if len(loaded.Tags) != 2 || loaded.Tags[0] != "Test" {
-		t.Errorf("expected tags [Test, Tags], got %v", loaded.Tags)
 	}
 }
 
