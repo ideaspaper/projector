@@ -184,9 +184,14 @@ func selectProjectForSelect(projects []*models.Project, cfg *config.Config) (*mo
 	fmt.Fprintln(tty, "Select a project:")
 	fmt.Fprintln(tty)
 
-	for i, p := range projects {
-		fmt.Fprintln(tty, formatter.FormatProjectCompact(p, i))
+	// Use grouped display based on config
+	opts := output.ListOptions{
+		ShowPath:  false,
+		ShowIndex: true,
+		Grouped:   cfg.GroupList,
 	}
+	listOutput, indexedProjects := formatter.FormatProjectList(projects, opts)
+	fmt.Fprintln(tty, listOutput)
 	fmt.Fprintln(tty)
 
 	// Read selection (prompt to tty)
@@ -204,9 +209,15 @@ func selectProjectForSelect(projects []*models.Project, cfg *config.Config) (*mo
 	}
 
 	index, err := strconv.Atoi(input)
-	if err != nil || index < 0 || index >= len(projects) {
+	if err != nil {
 		return nil, fmt.Errorf("invalid selection: %s", input)
 	}
 
-	return projects[index], nil
+	// Convert 1-based input to 0-based index
+	index--
+	if index < 0 || index >= len(indexedProjects) {
+		return nil, fmt.Errorf("invalid selection: %d", index+1)
+	}
+
+	return indexedProjects[index], nil
 }

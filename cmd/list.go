@@ -160,7 +160,13 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	// Format and display
 	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
-	fmt.Println(formatter.FormatProjectList(allProjects, listShowPath, grouped))
+	opts := output.ListOptions{
+		ShowPath:  listShowPath,
+		ShowIndex: false,
+		Grouped:   grouped,
+	}
+	listOutput, _ := formatter.FormatProjectList(allProjects, opts)
+	fmt.Println(listOutput)
 
 	return nil
 }

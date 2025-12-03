@@ -14,8 +14,8 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.SortList != SortByName {
 		t.Errorf("expected SortByName, got %s", cfg.SortList)
 	}
-	if cfg.GroupList != false {
-		t.Error("expected GroupList to be false")
+	if cfg.GroupList != true {
+		t.Error("expected GroupList to be true")
 	}
 	if cfg.ShowColors != true {
 		t.Error("expected ShowColors to be true")

@@ -87,7 +87,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		SortList:                     SortByName,
-		GroupList:                    false,
+		GroupList:                    true,
 		ShowColors:                   true,
 		CheckInvalidPaths:            true,
 		ShowParentOnDuplicates:       false,

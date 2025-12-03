@@ -188,9 +188,14 @@ func selectProjectInteractive(projects []*models.Project, cfg *config.Config) (*
 	fmt.Println("Select a project to open:")
 	fmt.Println()
 
-	for i, p := range projects {
-		fmt.Println(formatter.FormatProjectCompact(p, i))
+	// Use grouped display based on config
+	opts := output.ListOptions{
+		ShowPath:  false,
+		ShowIndex: true,
+		Grouped:   cfg.GroupList,
 	}
+	listOutput, indexedProjects := formatter.FormatProjectList(projects, opts)
+	fmt.Println(listOutput)
 	fmt.Println()
 
 	fmt.Print("Enter project number (or 'q' to quit): ")
@@ -206,11 +211,13 @@ func selectProjectInteractive(projects []*models.Project, cfg *config.Config) (*
 		return nil, fmt.Errorf("invalid selection")
 	}
 
-	if index < 0 || index >= len(projects) {
+	// Convert 1-based input to 0-based index
+	index--
+	if index < 0 || index >= len(indexedProjects) {
 		return nil, fmt.Errorf("invalid selection: index out of range")
 	}
 
-	return projects[index], nil
+	return indexedProjects[index], nil
 }
 
 // openInEditor opens a path in the specified editor

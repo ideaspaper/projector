@@ -264,6 +264,26 @@ projector open
 projector open --tag Work
 ```
 
+**Interactive Selection:**
+
+When no project name is provided, an interactive menu is displayed:
+
+```
+Select a project to open:
+
+Favorites
+  [1] my-app [Work] - /Users/you/projects/my-app
+  [2] blog - /Users/you/projects/blog
+
+Git Repositories
+  [3] api - /Users/you/work/api
+  [4] frontend [React] - /Users/you/work/frontend
+
+Enter project number (or 'q' to quit):
+```
+
+Projects are grouped by type (if `groupList` is enabled in config), showing tags and truncated paths. Enter the number to open that project.
+
 ### remove
 
 Remove a project from favorites.
@@ -376,6 +396,10 @@ projector select my
 projector select --tag Work
 ```
 
+**Interactive Selection:**
+
+Similar to `open`, when no project name is provided, an interactive menu is displayed with 1-based numbering. The selected project's path is output to stdout, making it ideal for shell scripting.
+
 **Shell Function for cd:**
 
 Add this to your `.bashrc` or `.zshrc` to create a `pjcd` command that selects a project and changes to its directory:
@@ -441,7 +465,7 @@ Configuration is stored in `~/.projector/config.json`:
 ```json
 {
   "sortList": "Name",
-  "groupList": false,
+  "groupList": true,
   "showColors": true,
   "checkInvalidPathsBeforeListing": true,
   "removeCurrentProjectFromList": true,
@@ -482,7 +506,7 @@ Configuration is stored in `~/.projector/config.json`:
 | Option                           | Description                                   | Default                 |
 | -------------------------------- | --------------------------------------------- | ----------------------- |
 | `sortList`                       | Sort order: `Name`, `Path`, `Saved`, `Recent` | `Name`                  |
-| `groupList`                      | Group projects by type in list                | `false`                 |
+| `groupList`                      | Group projects by type in list                | `true`                  |
 | `showColors`                     | Enable colored output                         | `true`                  |
 | `checkInvalidPathsBeforeListing` | Check if paths exist                          | `true`                  |
 | `editor`                         | Default editor command                        | `code`                  |

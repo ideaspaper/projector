@@ -39,11 +39,30 @@ func NewFormatter(colored bool) *Formatter {
 	}
 }
 
-// FormatProject formats a single project for display
-func (f *Formatter) FormatProject(p *models.Project, showPath bool) string {
+// ListOptions configures how FormatProjectList displays projects
+type ListOptions struct {
+	ShowPath  bool // Show full path on separate line
+	ShowIndex bool // Show index numbers for selection
+	Grouped   bool // Group by project kind
+}
+
+// formatProjectItem formats a single project item
+func (f *Formatter) formatProjectItem(p *models.Project, index int, opts ListOptions, indent string) string {
 	var sb strings.Builder
 
-	// Project name
+	sb.WriteString(indent)
+
+	// Index (1-based for user display)
+	if opts.ShowIndex {
+		if f.colored {
+			sb.WriteString(f.infoColor.Sprintf("[%d]", index))
+		} else {
+			sb.WriteString(fmt.Sprintf("[%d]", index))
+		}
+		sb.WriteString(" ")
+	}
+
+	// Name
 	if f.colored {
 		sb.WriteString(f.nameColor.Sprint(p.Name))
 	} else {
@@ -70,27 +89,47 @@ func (f *Formatter) FormatProject(p *models.Project, showPath bool) string {
 	}
 
 	// Path
-	if showPath {
-		sb.WriteString("\n  ")
+	path := p.RootPath
+	if opts.ShowPath {
+		// Full path on new line
+		sb.WriteString("\n")
+		sb.WriteString(indent)
+		if opts.ShowIndex {
+			sb.WriteString("    ") // Extra indent to align with name
+		}
 		if f.colored {
-			sb.WriteString(f.pathColor.Sprint(p.RootPath))
+			sb.WriteString(f.pathColor.Sprint(path))
 		} else {
-			sb.WriteString(p.RootPath)
+			sb.WriteString(path)
+		}
+	} else {
+		// Truncated path on same line
+		sb.WriteString(" - ")
+		if len(path) > 50 {
+			path = "..." + path[len(path)-47:]
+		}
+		if f.colored {
+			sb.WriteString(f.pathColor.Sprint(path))
+		} else {
+			sb.WriteString(path)
 		}
 	}
 
 	return sb.String()
 }
 
-// FormatProjectList formats a list of projects
-func (f *Formatter) FormatProjectList(projects []*models.Project, showPath bool, grouped bool) string {
+// FormatProjectList formats a list of projects with the given options
+// Returns the formatted string and a slice mapping display index (1-based) to project
+func (f *Formatter) FormatProjectList(projects []*models.Project, opts ListOptions) (string, []*models.Project) {
 	if len(projects) == 0 {
-		return f.FormatInfo("No projects found.")
+		return f.FormatInfo("No projects found."), nil
 	}
 
 	var sb strings.Builder
+	indexedProjects := make([]*models.Project, 0, len(projects))
+	currentIndex := 1 // 1-based index
 
-	if grouped {
+	if opts.Grouped {
 		// Group by kind
 		groups := make(map[models.ProjectKind][]*models.Project)
 		for _, p := range projects {
@@ -122,54 +161,23 @@ func (f *Formatter) FormatProjectList(projects []*models.Project, showPath bool,
 			sb.WriteString("\n")
 
 			for _, p := range ps {
-				sb.WriteString("  ")
-				sb.WriteString(f.FormatProject(p, showPath))
+				sb.WriteString(f.formatProjectItem(p, currentIndex, opts, "  "))
 				sb.WriteString("\n")
+				indexedProjects = append(indexedProjects, p)
+				currentIndex++
 			}
 			sb.WriteString("\n")
 		}
 	} else {
 		for _, p := range projects {
-			sb.WriteString(f.FormatProject(p, showPath))
+			sb.WriteString(f.formatProjectItem(p, currentIndex, opts, ""))
 			sb.WriteString("\n")
+			indexedProjects = append(indexedProjects, p)
+			currentIndex++
 		}
 	}
 
-	return strings.TrimSuffix(sb.String(), "\n")
-}
-
-// FormatProjectCompact formats a project in a compact single-line format
-func (f *Formatter) FormatProjectCompact(p *models.Project, index int) string {
-	var sb strings.Builder
-
-	// Index
-	if f.colored {
-		sb.WriteString(f.infoColor.Sprintf("[%d]", index))
-	} else {
-		sb.WriteString(fmt.Sprintf("[%d]", index))
-	}
-	sb.WriteString(" ")
-
-	// Name
-	if f.colored {
-		sb.WriteString(f.nameColor.Sprint(p.Name))
-	} else {
-		sb.WriteString(p.Name)
-	}
-
-	// Path (truncated)
-	sb.WriteString(" - ")
-	path := p.RootPath
-	if len(path) > 50 {
-		path = "..." + path[len(path)-47:]
-	}
-	if f.colored {
-		sb.WriteString(f.pathColor.Sprint(path))
-	} else {
-		sb.WriteString(path)
-	}
-
-	return sb.String()
+	return strings.TrimSuffix(sb.String(), "\n"), indexedProjects
 }
 
 // getKindHeader returns the header for a project kind
