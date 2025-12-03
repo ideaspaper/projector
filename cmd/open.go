@@ -40,6 +40,12 @@ var (
 	openEditor    string
 	openTag       string
 	openGrouped   bool
+	openFavorites bool
+	openGit       bool
+	openSVN       bool
+	openMercurial bool
+	openVSCode    bool
+	openAny       bool
 )
 
 // openCmd represents the open command
@@ -73,6 +79,12 @@ func init() {
 	openCmd.Flags().StringVarP(&openEditor, "editor", "e", "", "editor to use (overrides config)")
 	openCmd.Flags().StringVarP(&openTag, "tag", "t", "", "filter projects by tag")
 	openCmd.Flags().BoolVarP(&openGrouped, "grouped", "g", false, "group projects by type")
+	openCmd.Flags().BoolVar(&openFavorites, "favorites", false, "show only favorites")
+	openCmd.Flags().BoolVar(&openGit, "git", false, "show only git repositories")
+	openCmd.Flags().BoolVar(&openSVN, "svn", false, "show only svn repositories")
+	openCmd.Flags().BoolVar(&openMercurial, "mercurial", false, "show only mercurial repositories")
+	openCmd.Flags().BoolVar(&openVSCode, "vscode", false, "show only vscode workspaces")
+	openCmd.Flags().BoolVar(&openAny, "any", false, "show only any-folder projects")
 }
 
 func runOpen(cmd *cobra.Command, args []string) error {
@@ -88,10 +100,41 @@ func runOpen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	// Collect all projects
-	allProjects, err := store.LoadAllProjects()
-	if err != nil {
-		return fmt.Errorf("failed to load projects: %w", err)
+	// Collect projects based on type filters
+	var allProjects []*models.Project
+
+	// Determine which types to show
+	showAll := !openFavorites && !openGit && !openSVN && !openMercurial && !openVSCode && !openAny
+
+	// Load favorites
+	if showAll || openFavorites {
+		projects, err := store.LoadProjects()
+		if err != nil {
+			return fmt.Errorf("failed to load projects: %w", err)
+		}
+		allProjects = append(allProjects, projects.Projects...)
+	}
+
+	// Load cached auto-detected projects
+	if showAll || openGit || openSVN || openMercurial || openVSCode || openAny {
+		cache, err := store.LoadCache()
+		if err == nil {
+			if showAll || openGit {
+				allProjects = append(allProjects, cache.Git...)
+			}
+			if showAll || openSVN {
+				allProjects = append(allProjects, cache.SVN...)
+			}
+			if showAll || openMercurial {
+				allProjects = append(allProjects, cache.Mercurial...)
+			}
+			if showAll || openVSCode {
+				allProjects = append(allProjects, cache.VSCode...)
+			}
+			if showAll || openAny {
+				allProjects = append(allProjects, cache.Any...)
+			}
+		}
 	}
 
 	// Filter enabled only

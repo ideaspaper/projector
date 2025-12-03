@@ -18,8 +18,14 @@ import (
 )
 
 var (
-	selectTag     string
-	selectGrouped bool
+	selectTag       string
+	selectGrouped   bool
+	selectFavorites bool
+	selectGit       bool
+	selectSVN       bool
+	selectMercurial bool
+	selectVSCode    bool
+	selectAny       bool
 )
 
 // selectCmd represents the select command
@@ -56,6 +62,12 @@ func init() {
 
 	selectCmd.Flags().StringVarP(&selectTag, "tag", "t", "", "filter projects by tag")
 	selectCmd.Flags().BoolVarP(&selectGrouped, "grouped", "g", false, "group projects by type")
+	selectCmd.Flags().BoolVar(&selectFavorites, "favorites", false, "show only favorites")
+	selectCmd.Flags().BoolVar(&selectGit, "git", false, "show only git repositories")
+	selectCmd.Flags().BoolVar(&selectSVN, "svn", false, "show only svn repositories")
+	selectCmd.Flags().BoolVar(&selectMercurial, "mercurial", false, "show only mercurial repositories")
+	selectCmd.Flags().BoolVar(&selectVSCode, "vscode", false, "show only vscode workspaces")
+	selectCmd.Flags().BoolVar(&selectAny, "any", false, "show only any-folder projects")
 }
 
 func runSelect(cmd *cobra.Command, args []string) error {
@@ -71,10 +83,41 @@ func runSelect(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	// Collect all projects
-	allProjects, err := store.LoadAllProjects()
-	if err != nil {
-		return fmt.Errorf("failed to load projects: %w", err)
+	// Collect projects based on type filters
+	var allProjects []*models.Project
+
+	// Determine which types to show
+	showAll := !selectFavorites && !selectGit && !selectSVN && !selectMercurial && !selectVSCode && !selectAny
+
+	// Load favorites
+	if showAll || selectFavorites {
+		projects, err := store.LoadProjects()
+		if err != nil {
+			return fmt.Errorf("failed to load projects: %w", err)
+		}
+		allProjects = append(allProjects, projects.Projects...)
+	}
+
+	// Load cached auto-detected projects
+	if showAll || selectGit || selectSVN || selectMercurial || selectVSCode || selectAny {
+		cache, err := store.LoadCache()
+		if err == nil {
+			if showAll || selectGit {
+				allProjects = append(allProjects, cache.Git...)
+			}
+			if showAll || selectSVN {
+				allProjects = append(allProjects, cache.SVN...)
+			}
+			if showAll || selectMercurial {
+				allProjects = append(allProjects, cache.Mercurial...)
+			}
+			if showAll || selectVSCode {
+				allProjects = append(allProjects, cache.VSCode...)
+			}
+			if showAll || selectAny {
+				allProjects = append(allProjects, cache.Any...)
+			}
+		}
 	}
 
 	// Filter enabled only

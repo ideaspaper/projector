@@ -229,6 +229,12 @@ projector open [project-name] [flags]
 | `--editor` | `-e` | Editor to use (overrides config) |
 | `--tag` | `-t` | Filter projects by tag |
 | `--grouped` | `-g` | Group projects by type (overrides config) |
+| `--favorites` | | Show only favorites |
+| `--git` | | Show only Git repositories |
+| `--svn` | | Show only SVN repositories |
+| `--mercurial` | | Show only Mercurial repositories |
+| `--vscode` | | Show only VS Code workspaces |
+| `--any` | | Show only any-folder projects |
 
 **Supported Editors:**
 
@@ -269,6 +275,12 @@ projector open --grouped=false
 
 # Interactive selection with grouping (overrides config)
 projector open -g
+
+# Open only from Git repositories
+projector open --git
+
+# Open only from favorites
+projector open --favorites
 ```
 
 **Interactive Selection:**
@@ -387,6 +399,12 @@ This is useful for scripting and shell integration.
 |------|-------|-------------|
 | `--tag` | `-t` | Filter projects by tag |
 | `--grouped` | `-g` | Group projects by type (overrides config) |
+| `--favorites` | | Show only favorites |
+| `--git` | | Show only Git repositories |
+| `--svn` | | Show only SVN repositories |
+| `--mercurial` | | Show only Mercurial repositories |
+| `--vscode` | | Show only VS Code workspaces |
+| `--any` | | Show only any-folder projects |
 
 **Examples:**
 
@@ -408,6 +426,12 @@ projector select --grouped=false
 
 # Interactive selection with grouping (overrides config)
 projector select -g
+
+# Select only from Git repositories
+projector select --git
+
+# Select only from favorites
+projector select --favorites
 ```
 
 **Interactive Selection:**
