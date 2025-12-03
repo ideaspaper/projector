@@ -1,3 +1,6 @@
+// Package storage provides JSON-based persistence for projects and cache,
+// including thread-safe operations for loading, saving, and managing
+// favorite projects and auto-detected repository caches.
 package storage
 
 import (

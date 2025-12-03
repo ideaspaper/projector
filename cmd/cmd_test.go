@@ -285,3 +285,369 @@ func TestLoadProjectsCombinedFilters(t *testing.T) {
 		}
 	})
 }
+
+func TestClearCache(t *testing.T) {
+	tmpDir, cleanup := testSetup(t)
+	defer cleanup()
+
+	store, err := storage.NewStorage(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create storage: %v", err)
+	}
+
+	// Verify cache exists before clearing
+	cachePath := filepath.Join(tmpDir, "cache.json")
+	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+		t.Fatal("expected cache.json to exist before clearing")
+	}
+
+	// Verify cache has data
+	cache, err := store.LoadCache()
+	if err != nil {
+		t.Fatalf("failed to load cache: %v", err)
+	}
+	if len(cache.Git) != 2 {
+		t.Errorf("expected 2 git repos in cache, got %d", len(cache.Git))
+	}
+
+	// Clear cache
+	if err := store.ClearCache(); err != nil {
+		t.Fatalf("failed to clear cache: %v", err)
+	}
+
+	// Verify cache file is removed
+	if _, err := os.Stat(cachePath); !os.IsNotExist(err) {
+		t.Error("expected cache.json to be removed after clearing")
+	}
+
+	// Verify loading cache after clearing returns empty
+	cache, err = store.LoadCache()
+	if err != nil {
+		t.Fatalf("failed to load cache after clearing: %v", err)
+	}
+	if len(cache.Git) != 0 {
+		t.Errorf("expected empty git cache after clearing, got %d", len(cache.Git))
+	}
+}
+
+func TestClearCachePreservesFavorites(t *testing.T) {
+	tmpDir, cleanup := testSetup(t)
+	defer cleanup()
+
+	store, err := storage.NewStorage(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create storage: %v", err)
+	}
+
+	// Load favorites before clearing cache
+	favoritesBefore, err := store.LoadProjects()
+	if err != nil {
+		t.Fatalf("failed to load projects: %v", err)
+	}
+	countBefore := favoritesBefore.Count()
+
+	// Clear cache
+	if err := store.ClearCache(); err != nil {
+		t.Fatalf("failed to clear cache: %v", err)
+	}
+
+	// Verify favorites are preserved
+	favoritesAfter, err := store.LoadProjects()
+	if err != nil {
+		t.Fatalf("failed to load projects after clearing cache: %v", err)
+	}
+	if favoritesAfter.Count() != countBefore {
+		t.Errorf("expected %d favorites after clearing cache, got %d", countBefore, favoritesAfter.Count())
+	}
+
+	// Verify projects.json still exists
+	projectsPath := filepath.Join(tmpDir, "projects.json")
+	if _, err := os.Stat(projectsPath); os.IsNotExist(err) {
+		t.Error("expected projects.json to exist after clearing cache")
+	}
+}
+
+func TestClearCacheNonExistent(t *testing.T) {
+	tmpDir, cleanup := testSetup(t)
+	defer cleanup()
+
+	// Remove cache file first
+	cachePath := filepath.Join(tmpDir, "cache.json")
+	os.Remove(cachePath)
+
+	store, err := storage.NewStorage(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create storage: %v", err)
+	}
+
+	// Clearing non-existent cache should not error
+	if err := store.ClearCache(); err != nil {
+		t.Errorf("ClearCache on non-existent cache failed: %v", err)
+	}
+}
+
+// Tests for helper functions
+
+func TestTypeFilter_ShowAll(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter TypeFilter
+		want   bool
+	}{
+		{
+			name:   "empty filter shows all",
+			filter: TypeFilter{},
+			want:   true,
+		},
+		{
+			name:   "favorites only",
+			filter: TypeFilter{Favorites: true},
+			want:   false,
+		},
+		{
+			name:   "git only",
+			filter: TypeFilter{Git: true},
+			want:   false,
+		},
+		{
+			name:   "multiple filters",
+			filter: TypeFilter{Favorites: true, Git: true},
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.filter.ShowAll(); got != tt.want {
+				t.Errorf("ShowAll() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadFilteredProjects(t *testing.T) {
+	tmpDir, cleanup := testSetup(t)
+	defer cleanup()
+
+	store, err := storage.NewStorage(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create storage: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		filter    TypeFilter
+		wantCount int
+	}{
+		{
+			name:      "load all",
+			filter:    TypeFilter{},
+			wantCount: 8,
+		},
+		{
+			name:      "favorites only",
+			filter:    TypeFilter{Favorites: true},
+			wantCount: 2,
+		},
+		{
+			name:      "git only",
+			filter:    TypeFilter{Git: true},
+			wantCount: 2,
+		},
+		{
+			name:      "svn only",
+			filter:    TypeFilter{SVN: true},
+			wantCount: 1,
+		},
+		{
+			name:      "mercurial only",
+			filter:    TypeFilter{Mercurial: true},
+			wantCount: 1,
+		},
+		{
+			name:      "vscode only",
+			filter:    TypeFilter{VSCode: true},
+			wantCount: 1,
+		},
+		{
+			name:      "any only",
+			filter:    TypeFilter{Any: true},
+			wantCount: 1,
+		},
+		{
+			name:      "favorites and git",
+			filter:    TypeFilter{Favorites: true, Git: true},
+			wantCount: 4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			projects, err := LoadFilteredProjects(store, tt.filter)
+			if err != nil {
+				t.Fatalf("LoadFilteredProjects failed: %v", err)
+			}
+			if len(projects) != tt.wantCount {
+				t.Errorf("got %d projects, want %d", len(projects), tt.wantCount)
+			}
+		})
+	}
+}
+
+func TestFilterEnabled(t *testing.T) {
+	projects := []*models.Project{
+		{Name: "enabled1", Enabled: true},
+		{Name: "disabled1", Enabled: false},
+		{Name: "enabled2", Enabled: true},
+		{Name: "disabled2", Enabled: false},
+	}
+
+	filtered := FilterEnabled(projects)
+
+	if len(filtered) != 2 {
+		t.Errorf("expected 2 enabled projects, got %d", len(filtered))
+	}
+
+	for _, p := range filtered {
+		if !p.Enabled {
+			t.Errorf("expected all filtered projects to be enabled, got disabled: %s", p.Name)
+		}
+	}
+}
+
+func TestFilterByTag(t *testing.T) {
+	projects := []*models.Project{
+		{Name: "work1", Tags: []string{"Work"}},
+		{Name: "personal1", Tags: []string{"Personal"}},
+		{Name: "work2", Tags: []string{"Work", "Go"}},
+		{Name: "notags", Tags: []string{}},
+	}
+
+	tests := []struct {
+		name      string
+		tag       string
+		wantCount int
+		wantNames []string
+	}{
+		{
+			name:      "filter by Work",
+			tag:       "Work",
+			wantCount: 2,
+			wantNames: []string{"work1", "work2"},
+		},
+		{
+			name:      "filter by Personal",
+			tag:       "Personal",
+			wantCount: 1,
+			wantNames: []string{"personal1"},
+		},
+		{
+			name:      "filter by Go",
+			tag:       "Go",
+			wantCount: 1,
+			wantNames: []string{"work2"},
+		},
+		{
+			name:      "empty tag returns all",
+			tag:       "",
+			wantCount: 4,
+		},
+		{
+			name:      "non-existent tag",
+			tag:       "NonExistent",
+			wantCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filtered := FilterByTag(projects, tt.tag)
+			if len(filtered) != tt.wantCount {
+				t.Errorf("got %d projects, want %d", len(filtered), tt.wantCount)
+			}
+
+			if tt.wantNames != nil {
+				gotNames := make(map[string]bool)
+				for _, p := range filtered {
+					gotNames[p.Name] = true
+				}
+				for _, name := range tt.wantNames {
+					if !gotNames[name] {
+						t.Errorf("expected project %q not found", name)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestFindProjectByName(t *testing.T) {
+	projects := []*models.Project{
+		{Name: "my-project"},
+		{Name: "another-project"},
+		{Name: "my-other-project"},
+		{Name: "test"},
+	}
+
+	tests := []struct {
+		name        string
+		searchName  string
+		wantProject string
+		wantMatches int
+		wantErr     bool
+	}{
+		{
+			name:        "exact match",
+			searchName:  "my-project",
+			wantProject: "my-project",
+			wantErr:     false,
+		},
+		{
+			name:        "exact match case insensitive",
+			searchName:  "MY-PROJECT",
+			wantProject: "my-project",
+			wantErr:     false,
+		},
+		{
+			name:        "single partial match",
+			searchName:  "test",
+			wantProject: "test",
+			wantErr:     false,
+		},
+		{
+			name:        "multiple partial matches",
+			searchName:  "my",
+			wantMatches: 2,
+			wantErr:     true,
+		},
+		{
+			name:       "no match",
+			searchName: "nonexistent",
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			project, matches, err := FindProjectByName(projects, tt.searchName)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+				if tt.wantMatches > 0 && len(matches) != tt.wantMatches {
+					t.Errorf("expected %d matches, got %d", tt.wantMatches, len(matches))
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+				if project == nil {
+					t.Errorf("expected project, got nil")
+				} else if project.Name != tt.wantProject {
+					t.Errorf("got project %q, want %q", project.Name, tt.wantProject)
+				}
+			}
+		})
+	}
+}

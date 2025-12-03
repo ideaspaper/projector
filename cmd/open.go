@@ -100,62 +100,25 @@ func runOpen(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	// Collect projects based on type filters
-	var allProjects []*models.Project
-
-	// Determine which types to show
-	showAll := !openFavorites && !openGit && !openSVN && !openMercurial && !openVSCode && !openAny
-
-	// Load favorites
-	if showAll || openFavorites {
-		projects, err := store.LoadProjects()
-		if err != nil {
-			return fmt.Errorf("failed to load projects: %w", err)
-		}
-		allProjects = append(allProjects, projects.Projects...)
+	// Load projects with type filter
+	filter := TypeFilter{
+		Favorites: openFavorites,
+		Git:       openGit,
+		SVN:       openSVN,
+		Mercurial: openMercurial,
+		VSCode:    openVSCode,
+		Any:       openAny,
 	}
-
-	// Load cached auto-detected projects
-	if showAll || openGit || openSVN || openMercurial || openVSCode || openAny {
-		cache, err := store.LoadCache()
-		if err == nil {
-			if showAll || openGit {
-				allProjects = append(allProjects, cache.Git...)
-			}
-			if showAll || openSVN {
-				allProjects = append(allProjects, cache.SVN...)
-			}
-			if showAll || openMercurial {
-				allProjects = append(allProjects, cache.Mercurial...)
-			}
-			if showAll || openVSCode {
-				allProjects = append(allProjects, cache.VSCode...)
-			}
-			if showAll || openAny {
-				allProjects = append(allProjects, cache.Any...)
-			}
-		}
+	allProjects, err := LoadFilteredProjects(store, filter)
+	if err != nil {
+		return err
 	}
 
 	// Filter enabled only
-	filtered := make([]*models.Project, 0)
-	for _, p := range allProjects {
-		if p.Enabled {
-			filtered = append(filtered, p)
-		}
-	}
-	allProjects = filtered
+	allProjects = FilterEnabled(allProjects)
 
 	// Filter by tag if specified
-	if openTag != "" {
-		filtered := make([]*models.Project, 0)
-		for _, p := range allProjects {
-			if p.HasTag(openTag) {
-				filtered = append(filtered, p)
-			}
-		}
-		allProjects = filtered
-	}
+	allProjects = FilterByTag(allProjects, openTag)
 
 	if len(allProjects) == 0 {
 		return fmt.Errorf("no projects found")
@@ -250,8 +213,10 @@ func selectProjectInteractive(cmd *cobra.Command, projects []*models.Project, cf
 	fmt.Println()
 
 	fmt.Print("Enter project number (or 'q' to quit): ")
-	var input string
-	fmt.Scanln(&input)
+	input, err := ReadUserInput()
+	if err != nil {
+		return nil, err
+	}
 
 	if input == "q" || input == "Q" {
 		os.Exit(0)

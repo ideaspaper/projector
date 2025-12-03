@@ -83,62 +83,25 @@ func runSelect(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	// Collect projects based on type filters
-	var allProjects []*models.Project
-
-	// Determine which types to show
-	showAll := !selectFavorites && !selectGit && !selectSVN && !selectMercurial && !selectVSCode && !selectAny
-
-	// Load favorites
-	if showAll || selectFavorites {
-		projects, err := store.LoadProjects()
-		if err != nil {
-			return fmt.Errorf("failed to load projects: %w", err)
-		}
-		allProjects = append(allProjects, projects.Projects...)
+	// Load projects with type filter
+	filter := TypeFilter{
+		Favorites: selectFavorites,
+		Git:       selectGit,
+		SVN:       selectSVN,
+		Mercurial: selectMercurial,
+		VSCode:    selectVSCode,
+		Any:       selectAny,
 	}
-
-	// Load cached auto-detected projects
-	if showAll || selectGit || selectSVN || selectMercurial || selectVSCode || selectAny {
-		cache, err := store.LoadCache()
-		if err == nil {
-			if showAll || selectGit {
-				allProjects = append(allProjects, cache.Git...)
-			}
-			if showAll || selectSVN {
-				allProjects = append(allProjects, cache.SVN...)
-			}
-			if showAll || selectMercurial {
-				allProjects = append(allProjects, cache.Mercurial...)
-			}
-			if showAll || selectVSCode {
-				allProjects = append(allProjects, cache.VSCode...)
-			}
-			if showAll || selectAny {
-				allProjects = append(allProjects, cache.Any...)
-			}
-		}
+	allProjects, err := LoadFilteredProjects(store, filter)
+	if err != nil {
+		return err
 	}
 
 	// Filter enabled only
-	filtered := make([]*models.Project, 0)
-	for _, p := range allProjects {
-		if p.Enabled {
-			filtered = append(filtered, p)
-		}
-	}
-	allProjects = filtered
+	allProjects = FilterEnabled(allProjects)
 
 	// Filter by tag if specified
-	if selectTag != "" {
-		filtered := make([]*models.Project, 0)
-		for _, p := range allProjects {
-			if p.HasTag(selectTag) {
-				filtered = append(filtered, p)
-			}
-		}
-		allProjects = filtered
-	}
+	allProjects = FilterByTag(allProjects, selectTag)
 
 	if len(allProjects) == 0 {
 		return fmt.Errorf("no projects found")

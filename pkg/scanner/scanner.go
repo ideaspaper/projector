@@ -1,3 +1,6 @@
+// Package scanner provides functionality for detecting and scanning
+// repositories (Git, SVN, Mercurial), VS Code workspaces, and arbitrary
+// folders within specified base directories.
 package scanner
 
 import (

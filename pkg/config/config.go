@@ -1,3 +1,5 @@
+// Package config provides configuration loading and management for projector,
+// including default values, file-based configuration, and environment variable overrides.
 package config
 
 import (
@@ -286,10 +288,14 @@ func (c *Config) GetProjectsLocation() string {
 	return filepath.Join(homeDir, ".projector")
 }
 
-// LoadOrCreateConfig loads existing config or creates a new one with defaults
+// LoadOrCreateConfig loads existing config or creates a new one with defaults.
+// If the config file cannot be read (other than not existing), a warning is printed
+// to stderr and default config is returned.
 func LoadOrCreateConfig() (*Config, error) {
 	cfg, err := LoadConfig()
 	if err != nil {
+		// Log warning to stderr so users are aware of config issues
+		fmt.Fprintf(os.Stderr, "Warning: failed to load config, using defaults: %v\n", err)
 		return DefaultConfig(), nil
 	}
 	return cfg, nil

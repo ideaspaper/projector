@@ -79,69 +79,40 @@ func runList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	logVerbose(cfg, "Loading projects with filters: favorites=%v git=%v svn=%v mercurial=%v vscode=%v any=%v",
+		listFavorites, listGit, listSVN, listMercurial, listVSCode, listAny)
+
 	// Initialize storage
 	store, err := storage.NewStorage(cfg.GetProjectsLocation())
 	if err != nil {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	var allProjects []*models.Project
-
-	// Determine which types to show
-	showAll := !listFavorites && !listGit && !listSVN && !listMercurial && !listVSCode && !listAny
-
-	// Load favorites
-	if showAll || listFavorites {
-		projects, err := store.LoadProjects()
-		if err != nil {
-			return fmt.Errorf("failed to load projects: %w", err)
-		}
-		allProjects = append(allProjects, projects.Projects...)
+	// Load projects with type filter
+	filter := TypeFilter{
+		Favorites: listFavorites,
+		Git:       listGit,
+		SVN:       listSVN,
+		Mercurial: listMercurial,
+		VSCode:    listVSCode,
+		Any:       listAny,
+	}
+	allProjects, err := LoadFilteredProjects(store, filter)
+	if err != nil {
+		return err
 	}
 
-	// Load cached auto-detected projects
-	if showAll || listGit || listSVN || listMercurial || listVSCode || listAny {
-		cache, err := store.LoadCache()
-		if err == nil {
-			if showAll || listGit {
-				allProjects = append(allProjects, cache.Git...)
-			}
-			if showAll || listSVN {
-				allProjects = append(allProjects, cache.SVN...)
-			}
-			if showAll || listMercurial {
-				allProjects = append(allProjects, cache.Mercurial...)
-			}
-			if showAll || listVSCode {
-				allProjects = append(allProjects, cache.VSCode...)
-			}
-			if showAll || listAny {
-				allProjects = append(allProjects, cache.Any...)
-			}
-		}
-	}
+	logVerbose(cfg, "Loaded %d projects before filtering", len(allProjects))
 
 	// Filter by enabled
 	if !listAll {
-		filtered := make([]*models.Project, 0)
-		for _, p := range allProjects {
-			if p.Enabled {
-				filtered = append(filtered, p)
-			}
-		}
-		allProjects = filtered
+		allProjects = FilterEnabled(allProjects)
 	}
 
 	// Filter by tag
-	if listTag != "" {
-		filtered := make([]*models.Project, 0)
-		for _, p := range allProjects {
-			if p.HasTag(listTag) {
-				filtered = append(filtered, p)
-			}
-		}
-		allProjects = filtered
-	}
+	allProjects = FilterByTag(allProjects, listTag)
+
+	logVerbose(cfg, "After filtering: %d projects", len(allProjects))
 
 	// Check for invalid paths if configured
 	if cfg.CheckInvalidPaths {

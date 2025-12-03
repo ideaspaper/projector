@@ -1,3 +1,5 @@
+// Package output provides formatting utilities for CLI output,
+// including colored text, project lists, and status messages.
 package output
 
 import (
@@ -8,6 +10,9 @@ import (
 
 	"github.com/ideaspaper/projector/pkg/models"
 )
+
+// MaxPathDisplayLength is the maximum length for displaying truncated paths.
+const MaxPathDisplayLength = 50
 
 // Formatter handles output formatting
 type Formatter struct {
@@ -105,8 +110,8 @@ func (f *Formatter) formatProjectItem(p *models.Project, index int, opts ListOpt
 	} else {
 		// Truncated path on same line
 		sb.WriteString(" - ")
-		if len(path) > 50 {
-			path = "..." + path[len(path)-47:]
+		if len(path) > MaxPathDisplayLength {
+			path = "..." + path[len(path)-(MaxPathDisplayLength-3):]
 		}
 		if f.colored {
 			sb.WriteString(f.pathColor.Sprint(path))

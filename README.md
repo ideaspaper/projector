@@ -16,6 +16,7 @@ A powerful command-line project manager inspired by the [VS Code Project Manager
   - [scan](#scan)
   - [select](#select)
   - [tag](#tag)
+  - [clear-cache](#clear-cache)
   - [completion](#completion)
 - [Configuration](#configuration)
 - [Projects File](#projects-file)
@@ -488,6 +489,33 @@ projector tag remove myproject Personal
 projector tag list
 ```
 
+### clear-cache
+
+Clear the cached auto-detected projects.
+
+```bash
+projector clear-cache
+```
+
+**Aliases:** `cc`
+
+This command removes the cache file (`~/.projector/cache.json`) that stores auto-detected repositories (Git, SVN, Mercurial, VS Code workspaces, and any-folder projects).
+
+**Note:** This does not affect your saved favorites in `projects.json`. After clearing the cache, run `projector scan` to re-detect projects.
+
+**Examples:**
+
+```bash
+# Clear the project cache
+projector clear-cache
+
+# Using the alias
+projector cc
+
+# Clear cache and re-scan for Git repositories
+projector clear-cache && projector scan --git ~/projects
+```
+
 ### completion
 
 Generate shell completion scripts.
@@ -541,22 +569,22 @@ Configuration is stored in `~/.projector/config.json`:
 
 ### Configuration Options
 
-| Option                           | Description                                   | Default                 |
-| -------------------------------- | --------------------------------------------- | ----------------------- |
-| `sortList`                       | Sort order: `Name`, `Path`, `Saved`, `Recent` | `Name`                  |
+| Option                           | Description                                                              | Default                 |
+| -------------------------------- | ------------------------------------------------------------------------ | ----------------------- |
+| `sortList`                       | Sort order: `Name`, `Path`, `Saved`, `Recent`                            | `Name`                  |
 | `groupList`                      | Group projects by type in list (can be overridden with `--grouped` flag) | `true`                  |
-| `showColors`                     | Enable colored output                         | `true`                  |
-| `checkInvalidPathsBeforeListing` | Check if paths exist                          | `true`                  |
-| `editor`                         | Default editor command                        | `code`                  |
-| `openInNewWindow`                | Always open in new window                     | `false`                 |
-| `tags`                           | Available tags for organization               | `["Personal", "Work"]`  |
-| `gitBaseFolders`                 | Folders to scan for Git repos                 | `[]`                    |
-| `gitIgnoredFolders`              | Folders to skip when scanning Git             | `["node_modules", ...]` |
-| `gitMaxDepthRecursion`           | Max depth for Git scanning                    | `4`                     |
-| `cacheProjectsBetweenSessions`   | Cache detected projects                       | `true`                  |
-| `ignoreProjectsWithinProjects`   | Skip nested projects                          | `false`                 |
-| `supportSymlinksOnBaseFolders`   | Follow symlinks                               | `false`                 |
-| `projectsLocation`               | Custom location for projects.json             | `""`                    |
+| `showColors`                     | Enable colored output                                                    | `true`                  |
+| `checkInvalidPathsBeforeListing` | Check if paths exist                                                     | `true`                  |
+| `editor`                         | Default editor command                                                   | `code`                  |
+| `openInNewWindow`                | Always open in new window                                                | `false`                 |
+| `tags`                           | Available tags for organization                                          | `["Personal", "Work"]`  |
+| `gitBaseFolders`                 | Folders to scan for Git repos                                            | `[]`                    |
+| `gitIgnoredFolders`              | Folders to skip when scanning Git                                        | `["node_modules", ...]` |
+| `gitMaxDepthRecursion`           | Max depth for Git scanning                                               | `4`                     |
+| `cacheProjectsBetweenSessions`   | Cache detected projects                                                  | `true`                  |
+| `ignoreProjectsWithinProjects`   | Skip nested projects                                                     | `false`                 |
+| `supportSymlinksOnBaseFolders`   | Follow symlinks                                                          | `false`                 |
+| `projectsLocation`               | Custom location for projects.json                                        | `""`                    |
 
 ## Projects File
 

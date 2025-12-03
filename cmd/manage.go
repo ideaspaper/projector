@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -156,15 +157,12 @@ func runEdit(cmd *cobra.Command, args []string) error {
 	}
 
 	if editEnabled != "" {
-		if editEnabled == "true" {
-			project.Enabled = true
-			changed = true
-		} else if editEnabled == "false" {
-			project.Enabled = false
-			changed = true
-		} else {
-			return fmt.Errorf("--enabled must be 'true' or 'false'")
+		enabled, err := strconv.ParseBool(editEnabled)
+		if err != nil {
+			return fmt.Errorf("--enabled must be a boolean value (true, false, 1, 0, etc.): %w", err)
 		}
+		project.Enabled = enabled
+		changed = true
 	}
 
 	if !changed {

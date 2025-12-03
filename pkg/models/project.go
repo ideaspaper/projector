@@ -1,3 +1,5 @@
+// Package models provides data structures for representing projects,
+// project lists, and project kinds used throughout the projector application.
 package models
 
 import "strings"
