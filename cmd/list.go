@@ -156,7 +156,11 @@ func runList(cmd *cobra.Command, args []string) error {
 	sortProjects(allProjects, cfg.SortList)
 
 	// Override grouping from flag or config
-	grouped := listGrouped || cfg.GroupList
+	// Flag takes precedence if explicitly set
+	grouped := cfg.GroupList
+	if cmd.Flags().Changed("grouped") {
+		grouped = listGrouped
+	}
 
 	// Format and display
 	formatter := output.NewFormatter(!noColor && cfg.ShowColors)

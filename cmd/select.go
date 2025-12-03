@@ -18,7 +18,8 @@ import (
 )
 
 var (
-	selectTag string
+	selectTag     string
+	selectGrouped bool
 )
 
 // selectCmd represents the select command
@@ -54,6 +55,7 @@ func init() {
 	rootCmd.AddCommand(selectCmd)
 
 	selectCmd.Flags().StringVarP(&selectTag, "tag", "t", "", "filter projects by tag")
+	selectCmd.Flags().BoolVarP(&selectGrouped, "grouped", "g", false, "group projects by type")
 }
 
 func runSelect(cmd *cobra.Command, args []string) error {
@@ -138,7 +140,7 @@ func runSelect(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		// Interactive selection
-		selectedProject, err = selectProjectForSelect(allProjects, cfg)
+		selectedProject, err = selectProjectForSelect(cmd, allProjects, cfg)
 		if err != nil {
 			return err
 		}
@@ -156,7 +158,7 @@ func runSelect(cmd *cobra.Command, args []string) error {
 
 // selectProjectForSelect shows an interactive selection menu for the select command
 // It writes prompts to /dev/tty so only the path goes to stdout
-func selectProjectForSelect(projects []*models.Project, cfg *config.Config) (*models.Project, error) {
+func selectProjectForSelect(cmd *cobra.Command, projects []*models.Project, cfg *config.Config) (*models.Project, error) {
 	// Sort according to config
 	sortProjects(projects, cfg.SortList)
 
@@ -184,11 +186,17 @@ func selectProjectForSelect(projects []*models.Project, cfg *config.Config) (*mo
 	fmt.Fprintln(tty, "Select a project:")
 	fmt.Fprintln(tty)
 
+	// Determine grouping: flag takes precedence if explicitly set
+	grouped := cfg.GroupList
+	if cmd.Flags().Changed("grouped") {
+		grouped = selectGrouped
+	}
+
 	// Use grouped display based on config
 	opts := output.ListOptions{
 		ShowPath:  false,
 		ShowIndex: true,
-		Grouped:   cfg.GroupList,
+		Grouped:   grouped,
 	}
 	listOutput, indexedProjects := formatter.FormatProjectList(projects, opts)
 	fmt.Fprintln(tty, listOutput)

@@ -228,6 +228,7 @@ projector open [project-name] [flags]
 | `--new-window` | `-n` | Open in a new window |
 | `--editor` | `-e` | Editor to use (overrides config) |
 | `--tag` | `-t` | Filter projects by tag |
+| `--grouped` | `-g` | Group projects by type (overrides config) |
 
 **Supported Editors:**
 
@@ -262,6 +263,12 @@ projector open
 
 # Filter interactive selection by tag
 projector open --tag Work
+
+# Interactive selection with flat list (no grouping)
+projector open --grouped=false
+
+# Interactive selection with grouping (overrides config)
+projector open -g
 ```
 
 **Interactive Selection:**
@@ -379,6 +386,7 @@ This is useful for scripting and shell integration.
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--tag` | `-t` | Filter projects by tag |
+| `--grouped` | `-g` | Group projects by type (overrides config) |
 
 **Examples:**
 
@@ -394,6 +402,12 @@ projector select my
 
 # Filter interactive selection by tag
 projector select --tag Work
+
+# Interactive selection with flat list (no grouping)
+projector select --grouped=false
+
+# Interactive selection with grouping (overrides config)
+projector select -g
 ```
 
 **Interactive Selection:**
@@ -506,7 +520,7 @@ Configuration is stored in `~/.projector/config.json`:
 | Option                           | Description                                   | Default                 |
 | -------------------------------- | --------------------------------------------- | ----------------------- |
 | `sortList`                       | Sort order: `Name`, `Path`, `Saved`, `Recent` | `Name`                  |
-| `groupList`                      | Group projects by type in list                | `true`                  |
+| `groupList`                      | Group projects by type in list (can be overridden with `--grouped` flag) | `true`                  |
 | `showColors`                     | Enable colored output                         | `true`                  |
 | `checkInvalidPathsBeforeListing` | Check if paths exist                          | `true`                  |
 | `editor`                         | Default editor command                        | `code`                  |

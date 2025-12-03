@@ -39,6 +39,7 @@ var (
 	openNewWindow bool
 	openEditor    string
 	openTag       string
+	openGrouped   bool
 )
 
 // openCmd represents the open command
@@ -71,6 +72,7 @@ func init() {
 	openCmd.Flags().BoolVarP(&openNewWindow, "new-window", "n", false, "open in a new window")
 	openCmd.Flags().StringVarP(&openEditor, "editor", "e", "", "editor to use (overrides config)")
 	openCmd.Flags().StringVarP(&openTag, "tag", "t", "", "filter projects by tag")
+	openCmd.Flags().BoolVarP(&openGrouped, "grouped", "g", false, "group projects by type")
 }
 
 func runOpen(cmd *cobra.Command, args []string) error {
@@ -155,7 +157,7 @@ func runOpen(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		// Interactive selection
-		selectedProject, err = selectProjectInteractive(allProjects, cfg)
+		selectedProject, err = selectProjectInteractive(cmd, allProjects, cfg)
 		if err != nil {
 			return err
 		}
@@ -180,7 +182,7 @@ func runOpen(cmd *cobra.Command, args []string) error {
 }
 
 // selectProjectInteractive shows an interactive selection menu
-func selectProjectInteractive(projects []*models.Project, cfg *config.Config) (*models.Project, error) {
+func selectProjectInteractive(cmd *cobra.Command, projects []*models.Project, cfg *config.Config) (*models.Project, error) {
 	// Sort according to config
 	sortProjects(projects, cfg.SortList)
 
@@ -188,11 +190,17 @@ func selectProjectInteractive(projects []*models.Project, cfg *config.Config) (*
 	fmt.Println("Select a project to open:")
 	fmt.Println()
 
+	// Determine grouping: flag takes precedence if explicitly set
+	grouped := cfg.GroupList
+	if cmd.Flags().Changed("grouped") {
+		grouped = openGrouped
+	}
+
 	// Use grouped display based on config
 	opts := output.ListOptions{
 		ShowPath:  false,
 		ShowIndex: true,
-		Grouped:   cfg.GroupList,
+		Grouped:   grouped,
 	}
 	listOutput, indexedProjects := formatter.FormatProjectList(projects, opts)
 	fmt.Println(listOutput)
