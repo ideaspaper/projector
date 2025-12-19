@@ -44,6 +44,8 @@ Examples:
 
   # Filter projects by tag
   projector list --tag Work`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	Version: version,
 }
 
