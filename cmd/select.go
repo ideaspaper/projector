@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -97,6 +98,14 @@ func runSelect(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if cfg.CheckInvalidPaths {
+		MarkInvalidProjectsDisabled(allProjects)
+	}
+
+	if cfg.RemoveCurrentFromList {
+		allProjects = RemoveCurrentProject(allProjects)
+	}
+
 	// Filter enabled only
 	allProjects = FilterEnabled(allProjects)
 
@@ -112,42 +121,23 @@ func runSelect(cmd *cobra.Command, args []string) error {
 
 	if len(args) > 0 {
 		projectName := args[0]
-
-		// First try exact match
-		for _, p := range allProjects {
-			if strings.EqualFold(p.Name, projectName) {
-				selectedProject = p
-				break
-			}
-		}
-
-		// If no exact match, try partial match
-		if selectedProject == nil {
-			var matches []*models.Project
-			for _, p := range allProjects {
-				if strings.Contains(strings.ToLower(p.Name), strings.ToLower(projectName)) {
-					matches = append(matches, p)
-				}
-			}
-
-			if len(matches) == 1 {
-				selectedProject = matches[0]
-			} else if len(matches) > 1 {
-				// Multiple matches - show selection
+		var matches []*models.Project
+		selectedProject, matches, err = FindProjectByQuery(allProjects, projectName, cfg.FilterOnFullPath)
+		if err != nil {
+			if len(matches) > 0 {
 				formatter := output.NewFormatter(!noColor && cfg.ShowColors)
-				fmt.Fprintln(os.Stderr, formatter.FormatWarning(fmt.Sprintf("Multiple projects match '%s':", projectName)))
-				for _, p := range matches {
-					fmt.Fprintf(os.Stderr, "  - %s (%s)\n", p.Name, p.RootPath)
-				}
+				ReportAmbiguousProjectMatches(os.Stderr, formatter, projectName, matches)
 				return fmt.Errorf("please be more specific")
-			} else {
-				return fmt.Errorf("project '%s' not found", projectName)
 			}
+			return err
 		}
 	} else {
 		// Interactive selection
 		selectedProject, err = selectProjectForSelect(cmd, allProjects, cfg)
 		if err != nil {
+			if errors.Is(err, errSelectionCancelled) {
+				return nil
+			}
 			return err
 		}
 	}
@@ -200,9 +190,10 @@ func selectProjectForSelect(cmd *cobra.Command, projects []*models.Project, cfg 
 
 	// Use grouped display based on config
 	opts := output.ListOptions{
-		ShowPath:  false,
-		ShowIndex: true,
-		Grouped:   grouped,
+		ShowPath:               false,
+		ShowIndex:              true,
+		Grouped:                grouped,
+		ShowParentOnDuplicates: cfg.ShowParentOnDuplicates,
 	}
 	listOutput, indexedProjects := formatter.FormatProjectList(projects, opts)
 	fmt.Fprintln(tty, listOutput)
@@ -219,7 +210,7 @@ func selectProjectForSelect(cmd *cobra.Command, projects []*models.Project, cfg 
 	input = strings.TrimSpace(input)
 
 	if input == "q" || input == "Q" {
-		os.Exit(0)
+		return nil, errSelectionCancelled
 	}
 
 	index, err := strconv.Atoi(input)

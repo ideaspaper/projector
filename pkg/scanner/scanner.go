@@ -167,6 +167,10 @@ func (s *Scanner) scanFolder(folder string, depth int, insideProject bool) ([]*m
 		insideProject = true
 	}
 
+	if s.ignoreWithinProjects && insideProject {
+		return projects, nil
+	}
+
 	// Scan subdirectories
 	entries, err := os.ReadDir(folder)
 	if err != nil {

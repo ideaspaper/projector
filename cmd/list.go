@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -104,6 +103,14 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	logVerbose(cfg, "Loaded %d projects before filtering", len(allProjects))
 
+	if cfg.CheckInvalidPaths {
+		MarkInvalidProjectsDisabled(allProjects)
+	}
+
+	if cfg.RemoveCurrentFromList {
+		allProjects = RemoveCurrentProject(allProjects)
+	}
+
 	// Filter by enabled
 	if !listAll {
 		allProjects = FilterEnabled(allProjects)
@@ -113,15 +120,6 @@ func runList(cmd *cobra.Command, args []string) error {
 	allProjects = FilterByTag(allProjects, listTag)
 
 	logVerbose(cfg, "After filtering: %d projects", len(allProjects))
-
-	// Check for invalid paths if configured
-	if cfg.CheckInvalidPaths {
-		for _, p := range allProjects {
-			if _, err := os.Stat(p.RootPath); os.IsNotExist(err) {
-				p.Enabled = false
-			}
-		}
-	}
 
 	// Sort projects
 	sortProjects(allProjects, cfg.SortList)
@@ -136,9 +134,10 @@ func runList(cmd *cobra.Command, args []string) error {
 	// Format and display
 	formatter := output.NewFormatter(!noColor && cfg.ShowColors)
 	opts := output.ListOptions{
-		ShowPath:  listShowPath,
-		ShowIndex: false,
-		Grouped:   grouped,
+		ShowPath:               listShowPath,
+		ShowIndex:              false,
+		Grouped:                grouped,
+		ShowParentOnDuplicates: cfg.ShowParentOnDuplicates,
 	}
 	listOutput, _ := formatter.FormatProjectList(allProjects, opts)
 	fmt.Println(listOutput)

@@ -4,6 +4,7 @@ package output
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -46,13 +47,14 @@ func NewFormatter(colored bool) *Formatter {
 
 // ListOptions configures how FormatProjectList displays projects
 type ListOptions struct {
-	ShowPath  bool // Show full path on separate line
-	ShowIndex bool // Show index numbers for selection
-	Grouped   bool // Group by project kind
+	ShowPath               bool // Show full path on separate line
+	ShowIndex              bool // Show index numbers for selection
+	Grouped                bool // Group by project kind
+	ShowParentOnDuplicates bool // Append parent folder for duplicate names
 }
 
 // formatProjectItem formats a single project item
-func (f *Formatter) formatProjectItem(p *models.Project, index int, opts ListOptions, indent string) string {
+func (f *Formatter) formatProjectItem(p *models.Project, index int, opts ListOptions, indent string, duplicateNames map[string]bool) string {
 	var sb strings.Builder
 
 	sb.WriteString(indent)
@@ -68,10 +70,18 @@ func (f *Formatter) formatProjectItem(p *models.Project, index int, opts ListOpt
 	}
 
 	// Name
+	name := p.Name
+	if opts.ShowParentOnDuplicates && duplicateNames[strings.ToLower(p.Name)] {
+		parent := filepath.Base(filepath.Dir(p.RootPath))
+		if parent != "." && parent != string(filepath.Separator) && parent != "" && parent != p.Name {
+			name = fmt.Sprintf("%s (%s)", p.Name, parent)
+		}
+	}
+
 	if f.colored {
-		sb.WriteString(f.nameColor.Sprint(p.Name))
+		sb.WriteString(f.nameColor.Sprint(name))
 	} else {
-		sb.WriteString(p.Name)
+		sb.WriteString(name)
 	}
 
 	// Tags
@@ -133,6 +143,16 @@ func (f *Formatter) FormatProjectList(projects []*models.Project, opts ListOptio
 	var sb strings.Builder
 	indexedProjects := make([]*models.Project, 0, len(projects))
 	currentIndex := 1 // 1-based index
+	duplicateNames := make(map[string]bool)
+	nameCounts := make(map[string]int)
+	for _, p := range projects {
+		nameCounts[strings.ToLower(p.Name)]++
+	}
+	for name, count := range nameCounts {
+		if count > 1 {
+			duplicateNames[name] = true
+		}
+	}
 
 	if opts.Grouped {
 		// Group by kind
@@ -166,7 +186,7 @@ func (f *Formatter) FormatProjectList(projects []*models.Project, opts ListOptio
 			sb.WriteString("\n")
 
 			for _, p := range ps {
-				sb.WriteString(f.formatProjectItem(p, currentIndex, opts, "  "))
+				sb.WriteString(f.formatProjectItem(p, currentIndex, opts, "  ", duplicateNames))
 				sb.WriteString("\n")
 				indexedProjects = append(indexedProjects, p)
 				currentIndex++
@@ -175,7 +195,7 @@ func (f *Formatter) FormatProjectList(projects []*models.Project, opts ListOptio
 		}
 	} else {
 		for _, p := range projects {
-			sb.WriteString(f.formatProjectItem(p, currentIndex, opts, ""))
+			sb.WriteString(f.formatProjectItem(p, currentIndex, opts, "", duplicateNames))
 			sb.WriteString("\n")
 			indexedProjects = append(indexedProjects, p)
 			currentIndex++

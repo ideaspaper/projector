@@ -249,6 +249,28 @@ func TestFormatProjectList_FullPath(t *testing.T) {
 	}
 }
 
+func TestFormatProjectList_ShowParentOnDuplicates(t *testing.T) {
+	f := NewFormatter(false)
+	projects := []*models.Project{
+		{Name: "api", RootPath: "/workspace/client/api", Enabled: true, Kind: models.KindFavorite},
+		{Name: "api", RootPath: "/workspace/server/api", Enabled: true, Kind: models.KindGit},
+	}
+
+	opts := ListOptions{
+		ShowIndex:              false,
+		Grouped:                false,
+		ShowParentOnDuplicates: true,
+	}
+	output, _ := f.FormatProjectList(projects, opts)
+
+	if !strings.Contains(output, "api (client)") {
+		t.Fatalf("expected first duplicate to include parent folder, got: %s", output)
+	}
+	if !strings.Contains(output, "api (server)") {
+		t.Fatalf("expected second duplicate to include parent folder, got: %s", output)
+	}
+}
+
 func TestFormatProjectList_AllKinds(t *testing.T) {
 	f := NewFormatter(false)
 	projects := []*models.Project{

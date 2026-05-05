@@ -46,7 +46,7 @@ Examples:
   projector list --tag Work`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
-	Version: version,
+	Version:       version,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

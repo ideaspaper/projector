@@ -3,6 +3,7 @@ package scanner
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/ideaspaper/projector/pkg/models"
@@ -309,6 +310,46 @@ func TestScanner_IgnoreWithinProjects(t *testing.T) {
 	projects2, _ := s2.Scan()
 	if len(projects2) != 1 {
 		t.Errorf("expected 1 project (nested ignored), got %d", len(projects2))
+	}
+}
+
+func TestScanner_IgnoreWithinProjectsPrunesDescendants(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission-based pruning test is not reliable on windows")
+	}
+
+	tmpDir := t.TempDir()
+	parentRepo := filepath.Join(tmpDir, "parent-repo")
+	if err := os.MkdirAll(filepath.Join(parentRepo, ".git"), 0755); err != nil {
+		t.Fatalf("failed to create parent repo: %v", err)
+	}
+
+	blockedDir := filepath.Join(parentRepo, "blocked")
+	if err := os.MkdirAll(blockedDir, 0755); err != nil {
+		t.Fatalf("failed to create blocked dir: %v", err)
+	}
+	if err := os.Chmod(blockedDir, 0); err != nil {
+		t.Fatalf("failed to chmod blocked dir: %v", err)
+	}
+	defer os.Chmod(blockedDir, 0755)
+
+	var errorCount int
+	s := NewScanner(ScannerGit)
+	s.SetBaseFolders([]string{tmpDir})
+	s.SetIgnoreWithinProjects(true)
+	s.SetErrorHandler(func(path string, err error) {
+		errorCount++
+	})
+
+	projects, err := s.Scan()
+	if err != nil {
+		t.Fatalf("Scan failed: %v", err)
+	}
+	if len(projects) != 1 {
+		t.Fatalf("expected 1 project, got %d", len(projects))
+	}
+	if errorCount != 0 {
+		t.Fatalf("expected scanner to prune descendant traversal, got %d errors", errorCount)
 	}
 }
 

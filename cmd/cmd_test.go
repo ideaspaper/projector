@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ideaspaper/projector/pkg/models"
@@ -494,6 +495,75 @@ func TestLoadFilteredProjects(t *testing.T) {
 	}
 }
 
+func TestLoadFilteredProjects_InvalidCacheReturnsHelpfulError(t *testing.T) {
+	tmpDir, cleanup := testSetup(t)
+	defer cleanup()
+
+	store, err := storage.NewStorage(tmpDir)
+	if err != nil {
+		t.Fatalf("failed to create storage: %v", err)
+	}
+
+	cachePath := filepath.Join(tmpDir, "cache.json")
+	if err := os.WriteFile(cachePath, []byte("{invalid-json"), 0644); err != nil {
+		t.Fatalf("failed to write invalid cache: %v", err)
+	}
+
+	_, err = LoadFilteredProjects(store, TypeFilter{})
+	if err == nil {
+		t.Fatal("expected LoadFilteredProjects to fail for invalid cache")
+	}
+
+	if !strings.Contains(err.Error(), "failed to load cached projects") {
+		t.Fatalf("expected helpful cache error, got %v", err)
+	}
+
+	if !strings.Contains(err.Error(), "projector clear-cache") {
+		t.Fatalf("expected cache recovery hint, got %v", err)
+	}
+}
+
+func TestMarkInvalidProjectsDisabled(t *testing.T) {
+	tmpDir := t.TempDir()
+	validPath := filepath.Join(tmpDir, "valid")
+	if err := os.MkdirAll(validPath, 0755); err != nil {
+		t.Fatalf("failed to create valid path: %v", err)
+	}
+
+	projects := []*models.Project{
+		{Name: "valid", RootPath: validPath, Enabled: true},
+		{Name: "missing", RootPath: filepath.Join(tmpDir, "missing"), Enabled: true},
+	}
+
+	MarkInvalidProjectsDisabled(projects)
+
+	if !projects[0].Enabled {
+		t.Fatal("expected valid project to remain enabled")
+	}
+	if projects[1].Enabled {
+		t.Fatal("expected missing project to be disabled")
+	}
+}
+
+func TestExcludeProjectByPath(t *testing.T) {
+	tmpDir := t.TempDir()
+	currentPath := filepath.Join(tmpDir, "current")
+	otherPath := filepath.Join(tmpDir, "other")
+
+	projects := []*models.Project{
+		{Name: "current", RootPath: currentPath, Enabled: true},
+		{Name: "other", RootPath: otherPath, Enabled: true},
+	}
+
+	filtered := ExcludeProjectByPath(projects, filepath.Join(currentPath, "."))
+	if len(filtered) != 1 {
+		t.Fatalf("expected 1 project after exclusion, got %d", len(filtered))
+	}
+	if filtered[0].Name != "other" {
+		t.Fatalf("expected remaining project to be other, got %s", filtered[0].Name)
+	}
+}
+
 func TestFilterEnabled(t *testing.T) {
 	projects := []*models.Project{
 		{Name: "enabled1", Enabled: true},
@@ -649,5 +719,28 @@ func TestFindProjectByName(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestFindProjectByQuery_FilterOnFullPath(t *testing.T) {
+	projects := []*models.Project{
+		{Name: "api", RootPath: "/work/backend/api"},
+		{Name: "docs", RootPath: "/notes/docs"},
+	}
+
+	project, matches, err := FindProjectByQuery(projects, "backend/api", true)
+	if err != nil {
+		t.Fatalf("expected path-aware query to succeed, got %v", err)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("expected no ambiguous matches, got %d", len(matches))
+	}
+	if project == nil || project.Name != "api" {
+		t.Fatalf("expected api project from full path query, got %#v", project)
+	}
+
+	_, _, err = FindProjectByQuery(projects, "backend/api", false)
+	if err == nil {
+		t.Fatal("expected full path query to fail when path matching is disabled")
 	}
 }

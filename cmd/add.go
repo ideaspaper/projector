@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -108,7 +109,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		if p.RootPath == projectPath {
 			return fmt.Errorf("project already exists: %s", p.Name)
 		}
-		if p.Name == name {
+		if strings.EqualFold(p.Name, name) {
 			return fmt.Errorf("project with name '%s' already exists", name)
 		}
 	}

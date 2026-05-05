@@ -543,6 +543,8 @@ Configuration is stored in `~/.projector/config.json`:
   "groupList": true,
   "showColors": true,
   "checkInvalidPathsBeforeListing": true,
+  "showParentFolderInfoOnDuplicates": false,
+  "filterOnFullPath": false,
   "removeCurrentProjectFromList": true,
   "cacheProjectsBetweenSessions": true,
   "ignoreProjectsWithinProjects": false,
@@ -577,21 +579,24 @@ Configuration is stored in `~/.projector/config.json`:
 
 ### Configuration Options
 
-| Option                           | Description                                                              | Default                 |
-| -------------------------------- | ------------------------------------------------------------------------ | ----------------------- |
-| `sortList`                       | Sort order: `Name`, `Path`, `Saved`, `Recent`                            | `Name`                  |
-| `groupList`                      | Group projects by type in list (can be overridden with `--grouped` flag) | `true`                  |
-| `showColors`                     | Enable colored output                                                    | `true`                  |
-| `checkInvalidPathsBeforeListing` | Check if paths exist                                                     | `true`                  |
-| `editor`                         | Default editor command                                                   | `code`                  |
-| `openInNewWindow`                | Always open in new window                                                | `false`                 |
-| `gitBaseFolders`                 | Folders to scan for Git repos                                            | `[]`                    |
-| `gitIgnoredFolders`              | Folders to skip when scanning Git                                        | `["node_modules", ...]` |
-| `gitMaxDepthRecursion`           | Max depth for Git scanning                                               | `4`                     |
-| `cacheProjectsBetweenSessions`   | Cache detected projects                                                  | `true`                  |
-| `ignoreProjectsWithinProjects`   | Skip nested projects                                                     | `false`                 |
-| `supportSymlinksOnBaseFolders`   | Follow symlinks                                                          | `false`                 |
-| `projectsLocation`               | Custom location for projects.json                                        | `""`                    |
+| Option                             | Description                                                               | Default                 |
+| ---------------------------------- | ------------------------------------------------------------------------- | ----------------------- |
+| `sortList`                         | Sort order: `Name`, `Path`, `Saved`                                       | `Name`                  |
+| `groupList`                        | Group projects by type in list (can be overridden with `--grouped` flag)  | `true`                  |
+| `showColors`                       | Enable colored output                                                     | `true`                  |
+| `checkInvalidPathsBeforeListing`   | Check if paths exist                                                      | `true`                  |
+| `showParentFolderInfoOnDuplicates` | Append the parent folder when duplicate project names are displayed       | `false`                 |
+| `filterOnFullPath`                 | Allow `open` and `select` to match against project paths as well as names | `false`                 |
+| `removeCurrentProjectFromList`     | Hide the current working directory from project lists and selectors       | `true`                  |
+| `editor`                           | Default editor command                                                    | `code`                  |
+| `openInNewWindow`                  | Always open in new window                                                 | `false`                 |
+| `gitBaseFolders`                   | Folders to scan for Git repos                                             | `[]`                    |
+| `gitIgnoredFolders`                | Folders to skip when scanning Git                                         | `["node_modules", ...]` |
+| `gitMaxDepthRecursion`             | Max depth for Git scanning                                                | `4`                     |
+| `cacheProjectsBetweenSessions`     | Cache detected projects                                                   | `true`                  |
+| `ignoreProjectsWithinProjects`     | Skip nested projects                                                      | `false`                 |
+| `supportSymlinksOnBaseFolders`     | Follow symlinks                                                           | `false`                 |
+| `projectsLocation`                 | Custom location for projects.json                                         | `""`                    |
 
 ## Projects File
 
